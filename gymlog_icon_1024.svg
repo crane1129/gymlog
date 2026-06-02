@@ -1,0 +1,126 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1024 1024"
+  width="1024"
+  height="1024"
+  shape-rendering="geometricPrecision"
+  text-rendering="geometricPrecision">
+
+  <!-- ═══════════════════════════════════════
+       GymLog App Icon — 1024 × 1024
+       Design: Obsidian & Volt / Stacked Bold
+       Colors: #0D0D12 · #FFFFFF · #C8FF00
+       Version: 1.0.0
+  ═══════════════════════════════════════ -->
+
+  <!-- iOS icon mask shape (Apple HIG: 180px radius on 1024px canvas) -->
+  <defs>
+    <clipPath id="icon-mask">
+      <rect width="1024" height="1024" rx="224" ry="224"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#icon-mask)">
+
+    <!-- ── Background ── -->
+    <rect width="1024" height="1024" fill="#0D0D12"/>
+
+    <!-- ── Dot grid texture (9×9, spacing 96px, offset 64px) ── -->
+    <g fill="#FFFFFF" opacity="0.055">
+      <!-- Row 1 y=80 -->
+      <circle cx="80"  cy="80"  r="4"/><circle cx="176" cy="80"  r="4"/><circle cx="272" cy="80"  r="4"/>
+      <circle cx="368" cy="80"  r="4"/><circle cx="464" cy="80"  r="4"/><circle cx="560" cy="80"  r="4"/>
+      <circle cx="656" cy="80"  r="4"/><circle cx="752" cy="80"  r="4"/><circle cx="848" cy="80"  r="4"/>
+      <circle cx="944" cy="80"  r="4"/>
+      <!-- Row 2 y=176 -->
+      <circle cx="80"  cy="176" r="4"/><circle cx="176" cy="176" r="4"/><circle cx="272" cy="176" r="4"/>
+      <circle cx="368" cy="176" r="4"/><circle cx="464" cy="176" r="4"/><circle cx="560" cy="176" r="4"/>
+      <circle cx="656" cy="176" r="4"/><circle cx="752" cy="176" r="4"/><circle cx="848" cy="176" r="4"/>
+      <circle cx="944" cy="176" r="4"/>
+      <!-- Row 3 y=272 -->
+      <circle cx="80"  cy="272" r="4"/><circle cx="176" cy="272" r="4"/><circle cx="272" cy="272" r="4"/>
+      <circle cx="368" cy="272" r="4"/><circle cx="464" cy="272" r="4"/><circle cx="560" cy="272" r="4"/>
+      <circle cx="656" cy="272" r="4"/><circle cx="752" cy="272" r="4"/><circle cx="848" cy="272" r="4"/>
+      <circle cx="944" cy="272" r="4"/>
+      <!-- Row 4 y=368 -->
+      <circle cx="80"  cy="368" r="4"/><circle cx="176" cy="368" r="4"/><circle cx="272" cy="368" r="4"/>
+      <circle cx="368" cy="368" r="4"/><circle cx="464" cy="368" r="4"/><circle cx="560" cy="368" r="4"/>
+      <circle cx="656" cy="368" r="4"/><circle cx="752" cy="368" r="4"/><circle cx="848" cy="368" r="4"/>
+      <circle cx="944" cy="368" r="4"/>
+      <!-- Row 5 y=464 -->
+      <circle cx="80"  cy="464" r="4"/><circle cx="176" cy="464" r="4"/><circle cx="272" cy="464" r="4"/>
+      <circle cx="368" cy="464" r="4"/><circle cx="464" cy="464" r="4"/><circle cx="560" cy="464" r="4"/>
+      <circle cx="656" cy="464" r="4"/><circle cx="752" cy="464" r="4"/><circle cx="848" cy="464" r="4"/>
+      <circle cx="944" cy="464" r="4"/>
+      <!-- Row 6 y=560 -->
+      <circle cx="80"  cy="560" r="4"/><circle cx="176" cy="560" r="4"/><circle cx="272" cy="560" r="4"/>
+      <circle cx="368" cy="560" r="4"/><circle cx="464" cy="560" r="4"/><circle cx="560" cy="560" r="4"/>
+      <circle cx="656" cy="560" r="4"/><circle cx="752" cy="560" r="4"/><circle cx="848" cy="560" r="4"/>
+      <circle cx="944" cy="560" r="4"/>
+      <!-- Row 7 y=656 -->
+      <circle cx="80"  cy="656" r="4"/><circle cx="176" cy="656" r="4"/><circle cx="272" cy="656" r="4"/>
+      <circle cx="368" cy="656" r="4"/><circle cx="464" cy="656" r="4"/><circle cx="560" cy="656" r="4"/>
+      <circle cx="656" cy="656" r="4"/><circle cx="752" cy="656" r="4"/><circle cx="848" cy="656" r="4"/>
+      <circle cx="944" cy="656" r="4"/>
+      <!-- Row 8 y=752 -->
+      <circle cx="80"  cy="752" r="4"/><circle cx="176" cy="752" r="4"/><circle cx="272" cy="752" r="4"/>
+      <circle cx="368" cy="752" r="4"/><circle cx="464" cy="752" r="4"/><circle cx="560" cy="752" r="4"/>
+      <circle cx="656" cy="752" r="4"/><circle cx="752" cy="752" r="4"/><circle cx="848" cy="752" r="4"/>
+      <circle cx="944" cy="752" r="4"/>
+      <!-- Row 9 y=848 -->
+      <circle cx="80"  cy="848" r="4"/><circle cx="176" cy="848" r="4"/><circle cx="272" cy="848" r="4"/>
+      <circle cx="368" cy="848" r="4"/><circle cx="464" cy="848" r="4"/><circle cx="560" cy="848" r="4"/>
+      <circle cx="656" cy="848" r="4"/><circle cx="752" cy="848" r="4"/><circle cx="848" cy="848" r="4"/>
+      <circle cx="944" cy="848" r="4"/>
+      <!-- Row 10 y=944 -->
+      <circle cx="80"  cy="944" r="4"/><circle cx="176" cy="944" r="4"/><circle cx="272" cy="944" r="4"/>
+      <circle cx="368" cy="944" r="4"/><circle cx="464" cy="944" r="4"/><circle cx="560" cy="944" r="4"/>
+      <circle cx="656" cy="944" r="4"/><circle cx="752" cy="944" r="4"/><circle cx="848" cy="944" r="4"/>
+      <circle cx="944" cy="944" r="4"/>
+    </g>
+
+    <!-- ── Volt divider hairline (center) ── -->
+    <rect x="0" y="508" width="1024" height="8" fill="#C8FF00" opacity="0.10"/>
+
+    <!-- ── GYM — white, ultra-bold ── -->
+    <!--
+      Font stack: prefer SF Pro Display Black / Helvetica Neue Heavy / Arial Black
+      In Figma: replace with "SF Pro Display" weight 900 for pixel-perfect output
+      Size: 380px  |  Center: x=512, baseline y=488
+      Letter-spacing: -12px (tight, premium feel)
+    -->
+    <text
+      x="512"
+      y="488"
+      text-anchor="middle"
+      dominant-baseline="auto"
+      font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+      font-size="380"
+      font-weight="900"
+      letter-spacing="-12"
+      fill="#FFFFFF">GYM</text>
+
+    <!-- ── LOG — volt yellow-green, ultra-bold ── -->
+    <!--
+      Same spec as GYM, baseline y=896
+      Volt: #C8FF00 (electric yellow-green, 200 luminance)
+    -->
+    <text
+      x="512"
+      y="896"
+      text-anchor="middle"
+      dominant-baseline="auto"
+      font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+      font-size="380"
+      font-weight="900"
+      letter-spacing="-12"
+      fill="#C8FF00">LOG</text>
+
+    <!-- ── Volt accent dot — bottom-right ── -->
+    <circle cx="928" cy="940" r="28" fill="#C8FF00" opacity="0.18"/>
+    <circle cx="928" cy="940" r="14" fill="#C8FF00" opacity="0.5"/>
+    <circle cx="928" cy="940" r="6"  fill="#C8FF00"/>
+
+  </g>
+
+</svg>
