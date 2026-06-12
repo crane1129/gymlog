@@ -12,6 +12,7 @@ class AppColors {
 
   // Brand (from app icon)
   static const brandBackground = Color(0xFF0D0D12);
+  static const brandOrange = Color(0xFFF66C1E);
   static const brandAccent = Color(0xFFC8FF00);
 
   // Background

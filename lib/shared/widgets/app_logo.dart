@@ -9,8 +9,6 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -18,18 +16,11 @@ class AppLogo extends StatelessWidget {
           width: compact ? 28 : 32,
           height: compact ? 28 : 32,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.brandAccent,
-                Color(0xFF9AE600),
-              ],
-            ),
+            color: AppColors.brandOrange,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: AppColors.brandAccent.withValues(alpha: 0.3),
+                color: AppColors.brandOrange.withValues(alpha: 0.4),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -41,7 +32,7 @@ class AppLogo extends StatelessWidget {
               style: TextStyle(
                 fontSize: compact ? 16 : 18,
                 fontWeight: FontWeight.w900,
-                color: AppColors.brandBackground,
+                color: Colors.white,
                 height: 1,
               ),
             ),
@@ -56,16 +47,16 @@ class AppLogo extends StatelessWidget {
               letterSpacing: -0.5,
             ),
             children: [
-              TextSpan(
+              const TextSpan(
                 text: 'GYM',
                 style: TextStyle(
-                  color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                  color: Colors.white,
                 ),
               ),
-              TextSpan(
+              const TextSpan(
                 text: 'LOG',
                 style: TextStyle(
-                  color: AppColors.brandAccent,
+                  color: AppColors.brandOrange,
                   fontWeight: FontWeight.w800,
                 ),
               ),

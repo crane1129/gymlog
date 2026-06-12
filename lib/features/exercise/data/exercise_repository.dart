@@ -20,14 +20,9 @@ class ExerciseRepository {
 
   Future<void> seedDefaultExercises() async {
     final now = DateTime.now();
-
-    for (final defaultEx in defaultExercises) {
-      final existing = await (_db.select(_db.exercises)
-            ..where((e) => e.id.equals(defaultEx.id)))
-          .getSingleOrNull();
-
-      if (existing == null) {
-        await _db.into(_db.exercises).insert(
+    await _db.transaction(() async {
+      for (final defaultEx in defaultExercises) {
+        await _db.into(_db.exercises).insertOnConflictUpdate(
               ExercisesCompanion.insert(
                 id: defaultEx.id,
                 name: defaultEx.nameKo,
@@ -42,7 +37,7 @@ class ExerciseRepository {
               ),
             );
       }
-    }
+    });
   }
 
   Future<List<Exercise>> getAllExercises() {

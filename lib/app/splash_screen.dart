@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/l10n/app_localizations.dart';
+import '../features/exercise/data/exercise_repository.dart';
 import '../shared/theme/app_colors.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late final AnimationController _iconController;
   late final AnimationController _textController;
@@ -51,6 +53,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _startAnimation();
+    ref.read(exerciseRepositoryProvider).seedDefaultExercises();
   }
 
   Future<void> _startAnimation() async {
@@ -76,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.brandBackground,
+      backgroundColor: AppColors.brandOrange,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -109,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 72,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.brandAccent,
+                      color: AppColors.brandBackground,
                       letterSpacing: -2,
                       height: 0.9,
                     ),
@@ -136,7 +139,7 @@ class _SplashScreenState extends State<SplashScreen>
                     l10n.splashTagline,
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: Colors.white.withValues(alpha: 0.9),
                       letterSpacing: 1,
                     ),
                   );

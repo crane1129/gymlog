@@ -89,6 +89,10 @@ class AppLocalizations {
   String deleteExerciseConfirm(String exerciseName) => isKorean
       ? '$exerciseName 기록을 삭제하시겠습니까?'
       : 'Delete $exerciseName records?';
+  String get editRecord => isKorean ? '기록 편집' : 'Edit Record';
+  String get editSets => isKorean ? '세트 편집' : 'Edit Sets';
+  String get saveChanges => isKorean ? '변경사항 저장' : 'Save Changes';
+  String get saveChangesDone => isKorean ? '변경사항이 저장되었습니다' : 'Changes saved';
 
   // Body Screen
   String get body => isKorean ? '바디' : 'Body';

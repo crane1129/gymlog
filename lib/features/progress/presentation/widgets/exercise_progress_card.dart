@@ -47,7 +47,7 @@ class ExerciseProgressCard extends StatelessWidget {
   String _formatDuration(int seconds) {
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
-    return '${minutes}:${secs.toString().padLeft(2, '0')}';
+    return '$minutes:${secs.toString().padLeft(2, '0')}';
   }
 
   Widget _buildStatsRow(BuildContext context, AppLocalizations l10n, String unitLabel) {

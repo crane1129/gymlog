@@ -13,7 +13,7 @@ class AppTheme {
         ),
         scaffoldBackgroundColor: AppColors.backgroundLight,
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.brandBackground,
           foregroundColor: Colors.white,
           elevation: 0,
         ),
@@ -58,8 +58,8 @@ class AppTheme {
         ),
         scaffoldBackgroundColor: AppColors.backgroundDark,
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.surfaceDark,
-          foregroundColor: AppColors.textPrimaryDark,
+          backgroundColor: AppColors.brandBackground,
+          foregroundColor: Colors.white,
           elevation: 0,
         ),
         cardTheme: const CardThemeData(

@@ -1,20 +1,40 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/exercise_type.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../exercise/presentation/exercise_picker_screen.dart';
 import '../../settings/data/settings_repository.dart';
 import '../data/workout_repository.dart';
 
 class SetData {
+  final String? existingId;
   final TextEditingController weightController;
   final TextEditingController repsController;
 
   SetData()
-      : weightController = TextEditingController(),
+      : existingId = null,
+        weightController = TextEditingController(),
         repsController = TextEditingController();
+
+  SetData.fromExisting({
+    required this.existingId,
+    required double? weightKgValue,
+    required int? repsValue,
+  })  : weightController = TextEditingController(
+          text: weightKgValue != null
+              ? (weightKgValue % 1 == 0
+                  ? weightKgValue.toInt().toString()
+                  : weightKgValue.toStringAsFixed(1))
+              : '',
+        ),
+        repsController = TextEditingController(
+          text: repsValue != null ? repsValue.toString() : '',
+        );
 
   bool get isEmpty =>
       weightController.text.isEmpty && repsController.text.isEmpty;
@@ -43,12 +63,31 @@ class SetData {
 }
 
 class CardioSetData {
+  final String? existingId;
   final TextEditingController durationController;
   final TextEditingController distanceController;
 
   CardioSetData()
-      : durationController = TextEditingController(),
+      : existingId = null,
+        durationController = TextEditingController(),
         distanceController = TextEditingController();
+
+  CardioSetData.fromExisting({
+    required this.existingId,
+    required int? durationSecondsValue,
+    required double? distanceKmValue,
+  })  : durationController = TextEditingController(
+          text: durationSecondsValue != null
+              ? (durationSecondsValue / 60).toStringAsFixed(0)
+              : '',
+        ),
+        distanceController = TextEditingController(
+          text: distanceKmValue != null
+              ? (distanceKmValue % 1 == 0
+                  ? distanceKmValue.toInt().toString()
+                  : distanceKmValue.toStringAsFixed(2))
+              : '',
+        );
 
   bool get isEmpty =>
       durationController.text.isEmpty && distanceController.text.isEmpty;
@@ -91,6 +130,15 @@ class ExerciseEntry {
   })  : sets = exerciseType == ExerciseType.strength ? [SetData()] : [],
         cardioSets = exerciseType == ExerciseType.cardio ? [CardioSetData()] : [];
 
+  ExerciseEntry.fromExistingSets({
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.exerciseType,
+    required List<SetData> initialSets,
+    required List<CardioSetData> initialCardioSets,
+  })  : sets = initialSets,
+        cardioSets = initialCardioSets;
+
   bool get isCardio => exerciseType == ExerciseType.cardio;
 
   List<SetData> get validSets => sets.where((s) => s.isValid).toList();
@@ -111,7 +159,22 @@ class ExerciseEntry {
 class SessionScreen extends ConsumerStatefulWidget {
   final String sessionId;
 
-  const SessionScreen({super.key, required this.sessionId});
+  /// Edit mode: 히스토리에서 특정 운동 세트를 편집할 때 사용
+  final String? editExerciseId;
+  final String? editExerciseName;
+  final String? editExerciseType;
+  final List<WorkoutSet>? editExistingSets;
+
+  const SessionScreen({
+    super.key,
+    required this.sessionId,
+    this.editExerciseId,
+    this.editExerciseName,
+    this.editExerciseType,
+    this.editExistingSets,
+  });
+
+  bool get isEditMode => editExerciseId != null;
 
   @override
   ConsumerState<SessionScreen> createState() => _SessionScreenState();
@@ -122,6 +185,63 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   DateTime _sessionDate = DateTime.now();
   final DateTime _startTime = DateTime.now();
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEditMode) {
+      _initEditMode();
+    }
+  }
+
+  void _initEditMode() {
+    final existingSets = widget.editExistingSets ?? [];
+    final exerciseType = ExerciseTypeExtension.fromString(
+      widget.editExerciseType ?? 'strength',
+    );
+    final settings = ref.read(settingsProvider);
+    final useLbs = settings.weightUnit == WeightUnit.lbs;
+
+    if (exerciseType == ExerciseType.cardio) {
+      final cardioSets = existingSets
+          .map((s) => CardioSetData.fromExisting(
+                existingId: s.id,
+                durationSecondsValue: s.durationSeconds,
+                // DB는 항상 km 저장 → lbs 단위(mi)면 역변환
+                distanceKmValue: s.distanceKm != null
+                    ? (useLbs ? s.distanceKm! / 1.60934 : s.distanceKm)
+                    : null,
+              ))
+          .toList();
+      cardioSets.add(CardioSetData());
+      _exercises.add(ExerciseEntry.fromExistingSets(
+        exerciseId: widget.editExerciseId!,
+        exerciseName: widget.editExerciseName!,
+        exerciseType: exerciseType,
+        initialSets: [],
+        initialCardioSets: cardioSets,
+      ));
+    } else {
+      final sets = existingSets
+          .map((s) => SetData.fromExisting(
+                existingId: s.id,
+                // DB는 항상 kg 저장 → lbs 단위면 역변환
+                weightKgValue: s.weightKg != null
+                    ? (useLbs ? s.weightKg! * 2.20462 : s.weightKg)
+                    : null,
+                repsValue: s.reps,
+              ))
+          .toList();
+      sets.add(SetData());
+      _exercises.add(ExerciseEntry.fromExistingSets(
+        exerciseId: widget.editExerciseId!,
+        exerciseName: widget.editExerciseName!,
+        exerciseType: exerciseType,
+        initialSets: sets,
+        initialCardioSets: [],
+      ));
+    }
+  }
 
   @override
   void dispose() {
@@ -265,6 +385,67 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     );
   }
 
+  Future<void> _saveEditSession() async {
+    final repo = ref.read(workoutRepositoryProvider);
+    final settings = ref.read(settingsProvider);
+    const uuid = Uuid();
+    final now = DateTime.now();
+
+    for (final exercise in _exercises) {
+      if (exercise.isCardio) {
+        final validSets = exercise.validCardioSets;
+        final companions = <WorkoutSetsCompanion>[];
+        for (int i = 0; i < validSets.length; i++) {
+          final setData = validSets[i];
+          final inputDistance = setData.distanceKm ?? 0;
+          final distanceKm = settings.useLbs
+              ? inputDistance * 1.60934
+              : inputDistance;
+          companions.add(WorkoutSetsCompanion.insert(
+            id: setData.existingId ?? uuid.v4(),
+            sessionId: widget.sessionId,
+            exerciseId: exercise.exerciseId,
+            setNumber: i + 1,
+            durationSeconds: Value(setData.durationSeconds),
+            distanceKm: Value(distanceKm),
+            createdAt: now,
+            updatedAt: now,
+          ));
+        }
+        await repo.replaceExerciseSets(
+          sessionId: widget.sessionId,
+          exerciseId: exercise.exerciseId,
+          newSets: companions,
+        );
+      } else {
+        final validSets = exercise.validSets;
+        final companions = <WorkoutSetsCompanion>[];
+        for (int i = 0; i < validSets.length; i++) {
+          final setData = validSets[i];
+          final inputWeight = setData.weightKg ?? 0;
+          final weightKg = settings.weightUnit == WeightUnit.lbs
+              ? inputWeight * 0.453592
+              : inputWeight;
+          companions.add(WorkoutSetsCompanion.insert(
+            id: setData.existingId ?? uuid.v4(),
+            sessionId: widget.sessionId,
+            exerciseId: exercise.exerciseId,
+            setNumber: i + 1,
+            reps: Value(setData.reps ?? 0),
+            weightKg: Value(weightKg),
+            createdAt: now,
+            updatedAt: now,
+          ));
+        }
+        await repo.replaceExerciseSets(
+          sessionId: widget.sessionId,
+          exerciseId: exercise.exerciseId,
+          newSets: companions,
+        );
+      }
+    }
+  }
+
   int get _totalSets {
     int count = 0;
     for (final exercise in _exercises) {
@@ -274,6 +455,45 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   }
 
   void _finishSession() {
+    if (widget.isEditMode) {
+      _saveEdit();
+    } else {
+      _confirmFinish();
+    }
+  }
+
+  void _saveEdit() {
+    final l10n = AppLocalizations.of(context);
+    final totalSets = _totalSets;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    if (totalSets == 0) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text(l10n.noSetsRecorded)),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    _saveEditSession().then((_) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text(l10n.saveChangesDone)),
+        );
+        Navigator.of(context).pop(true);
+      }
+    }).catchError((e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+        );
+      }
+    });
+  }
+
+  void _confirmFinish() {
     final l10n = AppLocalizations.of(context);
     final totalSets = _totalSets;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -328,27 +548,30 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: InkWell(
-          onTap: _selectDate,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(l10n.workoutDateTitle(_sessionDate.month, _sessionDate.day)),
-                const SizedBox(width: 4),
-                const Icon(Icons.calendar_today, size: 18),
-              ],
-            ),
-          ),
-        ),
+        title: widget.isEditMode
+            ? Text(l10n.editSets)
+            : InkWell(
+                onTap: _selectDate,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(l10n.workoutDateTitle(_sessionDate.month, _sessionDate.day)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.calendar_today, size: 18),
+                    ],
+                  ),
+                ),
+              ),
         actions: [
-          IconButton(
-            onPressed: _addExercise,
-            icon: const Icon(Icons.add),
-            tooltip: l10n.addExercise,
-          ),
+          if (!widget.isEditMode)
+            IconButton(
+              onPressed: _addExercise,
+              icon: const Icon(Icons.add),
+              tooltip: l10n.addExercise,
+            ),
           if (_isSaving)
             const Padding(
               padding: EdgeInsets.all(16),
@@ -364,7 +587,10 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
           else
             TextButton(
               onPressed: _finishSession,
-              child: Text(l10n.finish, style: const TextStyle(color: Colors.white)),
+              child: Text(
+                widget.isEditMode ? l10n.saveChanges : l10n.finish,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
         ],
       ),

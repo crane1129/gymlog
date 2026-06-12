@@ -100,6 +100,23 @@ class WorkoutRepository {
         .go();
   }
 
+  /// 기존 세트를 모두 지우고 새 세트로 교체 (edit 모드에서 사용)
+  Future<void> replaceExerciseSets({
+    required String sessionId,
+    required String exerciseId,
+    required List<WorkoutSetsCompanion> newSets,
+  }) async {
+    await _db.transaction(() async {
+      await (_db.delete(_db.workoutSets)
+            ..where((s) =>
+                s.sessionId.equals(sessionId) & s.exerciseId.equals(exerciseId)))
+          .go();
+      for (final companion in newSets) {
+        await _db.into(_db.workoutSets).insert(companion);
+      }
+    });
+  }
+
   Future<List<WorkoutSession>> getAllSessions() {
     return (_db.select(_db.workoutSessions)
           ..orderBy([(s) => OrderingTerm.desc(s.date)]))

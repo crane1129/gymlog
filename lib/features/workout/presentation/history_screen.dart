@@ -8,6 +8,7 @@ import '../../../core/l10n/app_localizations.dart';
 import '../data/workout_repository.dart';
 import '../../exercise/data/exercise_repository.dart';
 import '../../settings/data/settings_repository.dart';
+import 'session_screen.dart';
 
 final sessionsProvider = StreamProvider<List<WorkoutSession>>((ref) {
   final repo = ref.watch(workoutRepositoryProvider);
@@ -239,13 +240,15 @@ class _SessionDetailView extends ConsumerWidget {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: InkWell(
-                      onTap: () => _showDeleteDialog(
+                      onTap: () => _showActionSheet(
                         context,
                         ref,
                         l10n,
                         sessionId,
                         exerciseId,
                         exerciseName,
+                        exerciseSets,
+                        exercise,
                       ),
                       borderRadius: BorderRadius.circular(12),
                       child: Padding(
@@ -342,6 +345,64 @@ class _SessionDetailView extends ConsumerWidget {
       }
     }
     return map;
+  }
+
+  void _showActionSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    String sessionId,
+    String exerciseId,
+    String exerciseName,
+    List<WorkoutSet> exerciseSets,
+    Exercise? exercise,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(l10n.editRecord),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                final exerciseTypeStr = exercise?.exerciseType ?? 'strength';
+                final result = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => SessionScreen(
+                      sessionId: sessionId,
+                      editExerciseId: exerciseId,
+                      editExerciseName: exerciseName,
+                      editExerciseType: exerciseTypeStr,
+                      editExistingSets: exerciseSets,
+                    ),
+                  ),
+                );
+                if (result == true) {
+                  ref.invalidate(sessionsProvider);
+                  ref.invalidate(sessionsWithSetsProvider);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: Text(l10n.deleteRecord, style: const TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _showDeleteDialog(context, ref, l10n, sessionId, exerciseId, exerciseName);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: Text(l10n.cancel),
+              onTap: () => Navigator.pop(sheetContext),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showDeleteDialog(
