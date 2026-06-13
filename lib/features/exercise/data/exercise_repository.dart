@@ -70,6 +70,7 @@ class ExerciseRepository {
     required String name,
     required String category,
     String? muscleGroup,
+    String? imagePath,
     ExerciseType exerciseType = ExerciseType.strength,
   }) async {
     final id = _uuid.v4();
@@ -81,6 +82,7 @@ class ExerciseRepository {
             name: name,
             category: category,
             muscleGroup: Value(muscleGroup),
+            imagePath: Value(imagePath),
             exerciseType: Value(exerciseType.value),
             isDefault: const Value(false),
             isActive: const Value(true),
@@ -92,12 +94,13 @@ class ExerciseRepository {
     return id;
   }
 
-  Future<void> updateExercise(String id, {String? name, String? category, String? muscleGroup}) async {
+  Future<void> updateExercise(String id, {String? name, String? category, String? muscleGroup, Value<String?> imagePath = const Value.absent()}) async {
     await (_db.update(_db.exercises)..where((e) => e.id.equals(id))).write(
       ExercisesCompanion(
         name: name != null ? Value(name) : const Value.absent(),
         category: category != null ? Value(category) : const Value.absent(),
         muscleGroup: muscleGroup != null ? Value(muscleGroup) : const Value.absent(),
+        imagePath: imagePath,
         updatedAt: Value(DateTime.now()),
       ),
     );

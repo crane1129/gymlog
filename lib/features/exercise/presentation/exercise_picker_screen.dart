@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -177,13 +179,17 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                       final muscleGroup = _getExerciseMuscleGroup(exercise, isKorean);
 
                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.getCategoryColor(exercise.category),
-                          child: Text(
-                            name[0],
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
+                        leading: exercise.imagePath != null && File(exercise.imagePath!).existsSync()
+                            ? CircleAvatar(
+                                backgroundImage: FileImage(File(exercise.imagePath!)),
+                              )
+                            : CircleAvatar(
+                                backgroundColor: AppColors.getCategoryColor(exercise.category),
+                                child: Text(
+                                  name[0],
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
                         title: Text(name),
                         subtitle: Text('$category${muscleGroup != null ? ' • $muscleGroup' : ''}'),
                         onTap: () {

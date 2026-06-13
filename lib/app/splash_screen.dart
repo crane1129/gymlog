@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../core/l10n/app_localizations.dart';
 import '../features/exercise/data/exercise_repository.dart';
@@ -21,6 +22,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late final Animation<double> _iconFade;
   late final Animation<double> _textSlide;
   late final Animation<double> _textFade;
+  String _version = '';
 
   @override
   void initState() {
@@ -53,7 +55,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _startAnimation();
+    _loadVersion();
     ref.read(exerciseRepositoryProvider).seedDefaultExercises();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() => _version = 'v${info.version}');
+    }
   }
 
   Future<void> _startAnimation() async {
@@ -135,13 +145,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               child: Builder(
                 builder: (context) {
                   final l10n = AppLocalizations.of(context);
-                  return Text(
-                    l10n.splashTagline,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      letterSpacing: 1,
-                    ),
+                  return Column(
+                    children: [
+                      Text(
+                        l10n.splashTagline,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      if (_version.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _version,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ],
                   );
                 },
               ),

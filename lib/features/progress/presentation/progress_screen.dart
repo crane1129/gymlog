@@ -31,8 +31,10 @@ class WorkoutStats {
 }
 
 final progressFilterProvider = StateProvider<ProgressFilter>((ref) {
-  return ProgressFilter.thisMonth;
+  return ProgressFilter.all;
 });
+
+final selectedExerciseProvider = StateProvider<String?>((ref) => null);
 
 DateTime _getStartDate(ProgressFilter filter) {
   final now = DateTime.now();
@@ -292,14 +294,6 @@ class ProgressScreen extends ConsumerWidget {
                       data: (stats) => _buildStatsView(context, stats, settings, l10n),
                     ),
                     const SizedBox(height: 24),
-                    Text(
-                      l10n.exerciseProgress,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
                     exerciseProgressAsync.when(
                       loading: () => const Center(
                         child: Padding(
@@ -308,8 +302,9 @@ class ProgressScreen extends ConsumerWidget {
                         ),
                       ),
                       error: (e, _) => Center(child: Text('${l10n.error}: $e')),
-                      data: (progressList) => _buildExerciseProgressList(
+                      data: (progressList) => _buildExerciseProgressSection(
                         context,
+                        ref,
                         progressList,
                         settings,
                         l10n,
@@ -519,33 +514,73 @@ class ProgressScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildExerciseProgressList(
+  Widget _buildExerciseProgressSection(
     BuildContext context,
+    WidgetRef ref,
     List<ExerciseProgress> progressList,
     AppSettings settings,
     AppLocalizations l10n,
   ) {
     if (progressList.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text(
-            l10n.noExerciseData,
-            style: const TextStyle(color: Colors.grey),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.exerciseProgress,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-        ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(
+                l10n.noExerciseData,
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
     final useLbs = settings.weightUnit == WeightUnit.lbs;
+    final selectedId = ref.watch(selectedExerciseProvider);
+
+    final selected = progressList.firstWhere(
+      (p) => p.exerciseId == selectedId,
+      orElse: () => progressList.first,
+    );
 
     return Column(
-      children: progressList
-          .map((progress) => ExerciseProgressCard(
-                progress: progress,
-                useLbs: useLbs,
-              ))
-          .toList(),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.exerciseProgress,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        DropdownMenu<String>(
+          initialSelection: selected.exerciseId,
+          expandedInsets: EdgeInsets.zero,
+          label: Text(l10n.selectExercise),
+          onSelected: (value) {
+            if (value != null) {
+              ref.read(selectedExerciseProvider.notifier).state = value;
+            }
+          },
+          dropdownMenuEntries: (List.of(progressList)
+                ..sort((a, b) => a.exerciseName.compareTo(b.exerciseName)))
+              .map((p) => DropdownMenuEntry<String>(
+                    value: p.exerciseId,
+                    label: p.exerciseName,
+                  ))
+              .toList(),
+        ),
+        const SizedBox(height: 12),
+        ExerciseProgressCard(
+          progress: selected,
+          useLbs: useLbs,
+        ),
+      ],
     );
   }
 

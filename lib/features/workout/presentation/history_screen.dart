@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/default_exercises.dart';
 import '../../../core/database/app_database.dart';
@@ -57,6 +58,26 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       appBar: AppBar(
         title: Text(l10n.history),
       ),
+      floatingActionButton: _selectedDay != null
+          ? FloatingActionButton(
+              onPressed: () async {
+                final sessionId = const Uuid().v4();
+                final result = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => SessionScreen(
+                      sessionId: sessionId,
+                      initialDate: _selectedDay,
+                    ),
+                  ),
+                );
+                if (result == true) {
+                  ref.invalidate(sessionsProvider);
+                  ref.invalidate(sessionsWithSetsProvider);
+                }
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
       body: Column(
         children: [
           sessionsAsync.when(

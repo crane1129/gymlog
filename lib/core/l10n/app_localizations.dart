@@ -220,6 +220,10 @@ class AppLocalizations {
   String get cannotDeleteDefault =>
       isKorean ? '기본 운동은 삭제할 수 없습니다' : 'Cannot delete default exercise';
   String get customExercise => isKorean ? '사용자 정의' : 'Custom';
+  String get takePhoto => isKorean ? '사진 촬영' : 'Take Photo';
+  String get chooseFromGallery => isKorean ? '갤러리에서 선택' : 'Choose from Gallery';
+  String get removePhoto => isKorean ? '사진 삭제' : 'Remove Photo';
+  String get exercisePhoto => isKorean ? '운동 사진' : 'Exercise Photo';
 
   // About
   String get about => isKorean ? '앱 정보' : 'About';

@@ -39,6 +39,12 @@ class $ExercisesTable extends Exercises
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('strength'));
+  static const VerificationMeta _imagePathMeta =
+      const VerificationMeta('imagePath');
+  @override
+  late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
+      'image_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _isDefaultMeta =
       const VerificationMeta('isDefault');
   @override
@@ -86,6 +92,7 @@ class $ExercisesTable extends Exercises
         category,
         muscleGroup,
         exerciseType,
+        imagePath,
         isDefault,
         isActive,
         createdAt,
@@ -130,6 +137,10 @@ class $ExercisesTable extends Exercises
           _exerciseTypeMeta,
           exerciseType.isAcceptableOrUnknown(
               data['exercise_type']!, _exerciseTypeMeta));
+    }
+    if (data.containsKey('image_path')) {
+      context.handle(_imagePathMeta,
+          imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta));
     }
     if (data.containsKey('is_default')) {
       context.handle(_isDefaultMeta,
@@ -176,6 +187,8 @@ class $ExercisesTable extends Exercises
           .read(DriftSqlType.string, data['${effectivePrefix}muscle_group']),
       exerciseType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}exercise_type'])!,
+      imagePath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}image_path']),
       isDefault: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_default'])!,
       isActive: attachedDatabase.typeMapping
@@ -201,6 +214,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
   final String category;
   final String? muscleGroup;
   final String exerciseType;
+  final String? imagePath;
   final bool isDefault;
   final bool isActive;
   final DateTime createdAt;
@@ -212,6 +226,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       required this.category,
       this.muscleGroup,
       required this.exerciseType,
+      this.imagePath,
       required this.isDefault,
       required this.isActive,
       required this.createdAt,
@@ -227,6 +242,9 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       map['muscle_group'] = Variable<String>(muscleGroup);
     }
     map['exercise_type'] = Variable<String>(exerciseType);
+    if (!nullToAbsent || imagePath != null) {
+      map['image_path'] = Variable<String>(imagePath);
+    }
     map['is_default'] = Variable<bool>(isDefault);
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -244,6 +262,9 @@ class Exercise extends DataClass implements Insertable<Exercise> {
           ? const Value.absent()
           : Value(muscleGroup),
       exerciseType: Value(exerciseType),
+      imagePath: imagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imagePath),
       isDefault: Value(isDefault),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
@@ -261,6 +282,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       category: serializer.fromJson<String>(json['category']),
       muscleGroup: serializer.fromJson<String?>(json['muscleGroup']),
       exerciseType: serializer.fromJson<String>(json['exerciseType']),
+      imagePath: serializer.fromJson<String?>(json['imagePath']),
       isDefault: serializer.fromJson<bool>(json['isDefault']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -277,6 +299,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       'category': serializer.toJson<String>(category),
       'muscleGroup': serializer.toJson<String?>(muscleGroup),
       'exerciseType': serializer.toJson<String>(exerciseType),
+      'imagePath': serializer.toJson<String?>(imagePath),
       'isDefault': serializer.toJson<bool>(isDefault),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -291,6 +314,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
           String? category,
           Value<String?> muscleGroup = const Value.absent(),
           String? exerciseType,
+          Value<String?> imagePath = const Value.absent(),
           bool? isDefault,
           bool? isActive,
           DateTime? createdAt,
@@ -302,6 +326,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
         category: category ?? this.category,
         muscleGroup: muscleGroup.present ? muscleGroup.value : this.muscleGroup,
         exerciseType: exerciseType ?? this.exerciseType,
+        imagePath: imagePath.present ? imagePath.value : this.imagePath,
         isDefault: isDefault ?? this.isDefault,
         isActive: isActive ?? this.isActive,
         createdAt: createdAt ?? this.createdAt,
@@ -318,6 +343,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       exerciseType: data.exerciseType.present
           ? data.exerciseType.value
           : this.exerciseType,
+      imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
       isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -335,6 +361,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
           ..write('category: $category, ')
           ..write('muscleGroup: $muscleGroup, ')
           ..write('exerciseType: $exerciseType, ')
+          ..write('imagePath: $imagePath, ')
           ..write('isDefault: $isDefault, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -346,7 +373,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
 
   @override
   int get hashCode => Object.hash(id, name, category, muscleGroup, exerciseType,
-      isDefault, isActive, createdAt, updatedAt, syncStatus);
+      imagePath, isDefault, isActive, createdAt, updatedAt, syncStatus);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -356,6 +383,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
           other.category == this.category &&
           other.muscleGroup == this.muscleGroup &&
           other.exerciseType == this.exerciseType &&
+          other.imagePath == this.imagePath &&
           other.isDefault == this.isDefault &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
@@ -369,6 +397,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
   final Value<String> category;
   final Value<String?> muscleGroup;
   final Value<String> exerciseType;
+  final Value<String?> imagePath;
   final Value<bool> isDefault;
   final Value<bool> isActive;
   final Value<DateTime> createdAt;
@@ -381,6 +410,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     this.category = const Value.absent(),
     this.muscleGroup = const Value.absent(),
     this.exerciseType = const Value.absent(),
+    this.imagePath = const Value.absent(),
     this.isDefault = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -394,6 +424,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     required String category,
     this.muscleGroup = const Value.absent(),
     this.exerciseType = const Value.absent(),
+    this.imagePath = const Value.absent(),
     this.isDefault = const Value.absent(),
     this.isActive = const Value.absent(),
     required DateTime createdAt,
@@ -411,6 +442,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     Expression<String>? category,
     Expression<String>? muscleGroup,
     Expression<String>? exerciseType,
+    Expression<String>? imagePath,
     Expression<bool>? isDefault,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
@@ -424,6 +456,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
       if (category != null) 'category': category,
       if (muscleGroup != null) 'muscle_group': muscleGroup,
       if (exerciseType != null) 'exercise_type': exerciseType,
+      if (imagePath != null) 'image_path': imagePath,
       if (isDefault != null) 'is_default': isDefault,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
@@ -439,6 +472,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
       Value<String>? category,
       Value<String?>? muscleGroup,
       Value<String>? exerciseType,
+      Value<String?>? imagePath,
       Value<bool>? isDefault,
       Value<bool>? isActive,
       Value<DateTime>? createdAt,
@@ -451,6 +485,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
       category: category ?? this.category,
       muscleGroup: muscleGroup ?? this.muscleGroup,
       exerciseType: exerciseType ?? this.exerciseType,
+      imagePath: imagePath ?? this.imagePath,
       isDefault: isDefault ?? this.isDefault,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
@@ -477,6 +512,9 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     }
     if (exerciseType.present) {
       map['exercise_type'] = Variable<String>(exerciseType.value);
+    }
+    if (imagePath.present) {
+      map['image_path'] = Variable<String>(imagePath.value);
     }
     if (isDefault.present) {
       map['is_default'] = Variable<bool>(isDefault.value);
@@ -507,6 +545,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
           ..write('category: $category, ')
           ..write('muscleGroup: $muscleGroup, ')
           ..write('exerciseType: $exerciseType, ')
+          ..write('imagePath: $imagePath, ')
           ..write('isDefault: $isDefault, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -2060,6 +2099,7 @@ typedef $$ExercisesTableCreateCompanionBuilder = ExercisesCompanion Function({
   required String category,
   Value<String?> muscleGroup,
   Value<String> exerciseType,
+  Value<String?> imagePath,
   Value<bool> isDefault,
   Value<bool> isActive,
   required DateTime createdAt,
@@ -2073,6 +2113,7 @@ typedef $$ExercisesTableUpdateCompanionBuilder = ExercisesCompanion Function({
   Value<String> category,
   Value<String?> muscleGroup,
   Value<String> exerciseType,
+  Value<String?> imagePath,
   Value<bool> isDefault,
   Value<bool> isActive,
   Value<DateTime> createdAt,
@@ -2124,6 +2165,9 @@ class $$ExercisesTableFilterComposer
 
   ColumnFilters<String> get exerciseType => $composableBuilder(
       column: $table.exerciseType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get imagePath => $composableBuilder(
+      column: $table.imagePath, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isDefault => $composableBuilder(
       column: $table.isDefault, builder: (column) => ColumnFilters(column));
@@ -2187,6 +2231,9 @@ class $$ExercisesTableOrderingComposer
       column: $table.exerciseType,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get imagePath => $composableBuilder(
+      column: $table.imagePath, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isDefault => $composableBuilder(
       column: $table.isDefault, builder: (column) => ColumnOrderings(column));
 
@@ -2226,6 +2273,9 @@ class $$ExercisesTableAnnotationComposer
 
   GeneratedColumn<String> get exerciseType => $composableBuilder(
       column: $table.exerciseType, builder: (column) => column);
+
+  GeneratedColumn<String> get imagePath =>
+      $composableBuilder(column: $table.imagePath, builder: (column) => column);
 
   GeneratedColumn<bool> get isDefault =>
       $composableBuilder(column: $table.isDefault, builder: (column) => column);
@@ -2292,6 +2342,7 @@ class $$ExercisesTableTableManager extends RootTableManager<
             Value<String> category = const Value.absent(),
             Value<String?> muscleGroup = const Value.absent(),
             Value<String> exerciseType = const Value.absent(),
+            Value<String?> imagePath = const Value.absent(),
             Value<bool> isDefault = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
@@ -2305,6 +2356,7 @@ class $$ExercisesTableTableManager extends RootTableManager<
             category: category,
             muscleGroup: muscleGroup,
             exerciseType: exerciseType,
+            imagePath: imagePath,
             isDefault: isDefault,
             isActive: isActive,
             createdAt: createdAt,
@@ -2318,6 +2370,7 @@ class $$ExercisesTableTableManager extends RootTableManager<
             required String category,
             Value<String?> muscleGroup = const Value.absent(),
             Value<String> exerciseType = const Value.absent(),
+            Value<String?> imagePath = const Value.absent(),
             Value<bool> isDefault = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
             required DateTime createdAt,
@@ -2331,6 +2384,7 @@ class $$ExercisesTableTableManager extends RootTableManager<
             category: category,
             muscleGroup: muscleGroup,
             exerciseType: exerciseType,
+            imagePath: imagePath,
             isDefault: isDefault,
             isActive: isActive,
             createdAt: createdAt,

@@ -1,5 +1,11 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../core/constants/default_exercises.dart';
 import '../../../core/constants/exercise_type.dart';
@@ -12,6 +18,19 @@ final exercisesStreamProvider = StreamProvider<List<Exercise>>((ref) {
   final repo = ref.watch(exerciseRepositoryProvider);
   return repo.watchAllExercises();
 });
+
+Future<String?> _saveExerciseImage(XFile pickedFile) async {
+  final appDir = await getApplicationDocumentsDirectory();
+  final imagesDir = Directory(p.join(appDir.path, 'exercise_images'));
+  if (!imagesDir.existsSync()) {
+    imagesDir.createSync(recursive: true);
+  }
+  final ext = p.extension(pickedFile.path);
+  final fileName = '${DateTime.now().millisecondsSinceEpoch}$ext';
+  final savedPath = p.join(imagesDir.path, fileName);
+  await File(pickedFile.path).copy(savedPath);
+  return savedPath;
+}
 
 class ManageExercisesScreen extends ConsumerWidget {
   const ManageExercisesScreen({super.key});
@@ -133,6 +152,17 @@ class ManageExercisesScreen extends ConsumerWidget {
     );
 
     return ListTile(
+      leading: exercise.imagePath != null && File(exercise.imagePath!).existsSync()
+          ? CircleAvatar(
+              backgroundImage: FileImage(File(exercise.imagePath!)),
+            )
+          : CircleAvatar(
+              backgroundColor: AppColors.getCategoryColor(exercise.category),
+              child: Text(
+                displayName[0],
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
       title: Text(displayName),
       subtitle: displayMuscleGroup.isNotEmpty
           ? Text(
@@ -182,6 +212,7 @@ class ManageExercisesScreen extends ConsumerWidget {
     final muscleGroupController = TextEditingController();
     final categories = l10n.isKorean ? ExerciseCategories.ko : ExerciseCategories.en;
     String selectedCategory = categories.first;
+    String? pickedImagePath;
 
     showDialog(
       context: context,
@@ -192,6 +223,10 @@ class ManageExercisesScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _buildImagePicker(context, l10n, pickedImagePath, (path) {
+                  setState(() => pickedImagePath = path);
+                }),
+                const SizedBox(height: 16),
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
@@ -238,6 +273,11 @@ class ManageExercisesScreen extends ConsumerWidget {
                   return;
                 }
 
+                String? savedImagePath;
+                if (pickedImagePath != null) {
+                  savedImagePath = await _saveExerciseImage(XFile(pickedImagePath!));
+                }
+
                 final repo = ref.read(exerciseRepositoryProvider);
                 final isCardio = selectedCategory == '유산소' || selectedCategory == 'Cardio';
                 await repo.createExercise(
@@ -246,6 +286,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                   muscleGroup: muscleGroupController.text.trim().isNotEmpty
                       ? muscleGroupController.text.trim()
                       : null,
+                  imagePath: savedImagePath,
                   exerciseType: isCardio ? ExerciseType.cardio : ExerciseType.strength,
                 );
 
@@ -281,6 +322,9 @@ class ManageExercisesScreen extends ConsumerWidget {
       selectedCategory = categories.first;
     }
 
+    String? currentImagePath = exercise.imagePath;
+    bool imageRemoved = false;
+
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -290,6 +334,13 @@ class ManageExercisesScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _buildImagePicker(context, l10n, currentImagePath, (path) {
+                  setState(() {
+                    currentImagePath = path;
+                    imageRemoved = path == null;
+                  });
+                }, showRemove: currentImagePath != null),
+                const SizedBox(height: 16),
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
@@ -338,6 +389,22 @@ class ManageExercisesScreen extends ConsumerWidget {
                   return;
                 }
 
+                Value<String?> imagePathValue = const Value.absent();
+                if (imageRemoved) {
+                  if (exercise.imagePath != null) {
+                    final oldFile = File(exercise.imagePath!);
+                    if (oldFile.existsSync()) oldFile.deleteSync();
+                  }
+                  imagePathValue = const Value(null);
+                } else if (currentImagePath != null && currentImagePath != exercise.imagePath) {
+                  final savedPath = await _saveExerciseImage(XFile(currentImagePath!));
+                  if (exercise.imagePath != null) {
+                    final oldFile = File(exercise.imagePath!);
+                    if (oldFile.existsSync()) oldFile.deleteSync();
+                  }
+                  imagePathValue = Value(savedPath);
+                }
+
                 final repo = ref.read(exerciseRepositoryProvider);
                 await repo.updateExercise(
                   exercise.id,
@@ -346,6 +413,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                   muscleGroup: muscleGroupController.text.trim().isNotEmpty
                       ? muscleGroupController.text.trim()
                       : null,
+                  imagePath: imagePathValue,
                 );
 
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
@@ -359,6 +427,101 @@ class ManageExercisesScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildImagePicker(
+    BuildContext context,
+    AppLocalizations l10n,
+    String? currentImagePath,
+    ValueChanged<String?> onImageChanged, {
+    bool showRemove = false,
+  }) {
+    final hasImage = currentImagePath != null && File(currentImagePath).existsSync();
+
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          builder: (sheetContext) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.camera_alt),
+                  title: Text(l10n.takePhoto),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(
+                      source: ImageSource.camera,
+                      maxWidth: 800,
+                      maxHeight: 800,
+                      imageQuality: 85,
+                    );
+                    if (picked != null) {
+                      onImageChanged(picked.path);
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library),
+                  title: Text(l10n.chooseFromGallery),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 800,
+                      maxHeight: 800,
+                      imageQuality: 85,
+                    );
+                    if (picked != null) {
+                      onImageChanged(picked.path);
+                    }
+                  },
+                ),
+                if (showRemove)
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline, color: Colors.red),
+                    title: Text(l10n.removePhoto, style: const TextStyle(color: Colors.red)),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      onImageChanged(null);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+          image: hasImage
+              ? DecorationImage(
+                  image: FileImage(File(currentImagePath)),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        ),
+        child: hasImage
+            ? null
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_a_photo, size: 32, color: Colors.grey[500]),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.exercisePhoto,
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
       ),
     );
   }

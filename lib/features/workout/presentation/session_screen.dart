@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/constants/default_exercises.dart';
 import '../../../core/constants/exercise_type.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/l10n/app_localizations.dart';
+import '../../exercise/data/exercise_repository.dart';
 import '../../exercise/presentation/exercise_picker_screen.dart';
 import '../../settings/data/settings_repository.dart';
 import '../data/workout_repository.dart';
@@ -160,6 +162,9 @@ class SessionScreen extends ConsumerStatefulWidget {
   final String sessionId;
 
   /// Edit mode: 히스토리에서 특정 운동 세트를 편집할 때 사용
+  final DateTime? initialDate;
+
+  /// Edit mode: 히스토리에서 특정 운동 세트를 편집할 때 사용
   final String? editExerciseId;
   final String? editExerciseName;
   final String? editExerciseType;
@@ -168,6 +173,7 @@ class SessionScreen extends ConsumerStatefulWidget {
   const SessionScreen({
     super.key,
     required this.sessionId,
+    this.initialDate,
     this.editExerciseId,
     this.editExerciseName,
     this.editExerciseType,
@@ -182,6 +188,7 @@ class SessionScreen extends ConsumerStatefulWidget {
 
 class _SessionScreenState extends ConsumerState<SessionScreen> {
   final List<ExerciseEntry> _exercises = [];
+  final Set<String> _preloadedExerciseIds = {};
   DateTime _sessionDate = DateTime.now();
   final DateTime _startTime = DateTime.now();
   bool _isSaving = false;
@@ -189,8 +196,99 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDate != null) {
+      _sessionDate = widget.initialDate!;
+    }
     if (widget.isEditMode) {
       _initEditMode();
+    } else if (widget.initialDate == null) {
+      _loadTodaysExercises();
+    }
+  }
+
+  Future<void> _loadTodaysExercises() async {
+    final workoutRepo = ref.read(workoutRepositoryProvider);
+    final exerciseRepo = ref.read(exerciseRepositoryProvider);
+    final settings = ref.read(settingsProvider);
+    final useLbs = settings.weightUnit == WeightUnit.lbs;
+    final isKorean = settings.locale.languageCode == 'ko';
+
+    final session = await workoutRepo.getSessionByDate(_sessionDate);
+    if (session == null) return;
+
+    final sets = await workoutRepo.getSetsBySession(session.id);
+    if (sets.isEmpty) return;
+
+    final groupedSets = <String, List<WorkoutSet>>{};
+    for (final set in sets) {
+      groupedSets.putIfAbsent(set.exerciseId, () => []).add(set);
+    }
+
+    final entries = <ExerciseEntry>[];
+    for (final entry in groupedSets.entries) {
+      final exerciseId = entry.key;
+      final exerciseSets = entry.value;
+
+      final exercise = await exerciseRepo.getExerciseById(exerciseId);
+      if (exercise == null) continue;
+
+      String exerciseName;
+      try {
+        final defaultEx = defaultExercises.firstWhere((e) => e.id == exerciseId);
+        exerciseName = defaultEx.getName(isKorean);
+      } catch (_) {
+        exerciseName = exercise.name;
+      }
+
+      final exerciseType = ExerciseTypeExtension.fromString(
+        exercise.exerciseType ?? 'strength',
+      );
+
+      if (exerciseType == ExerciseType.cardio) {
+        final cardioSets = exerciseSets
+            .map((s) => CardioSetData.fromExisting(
+                  existingId: s.id,
+                  durationSecondsValue: s.durationSeconds,
+                  distanceKmValue: s.distanceKm != null
+                      ? (useLbs ? s.distanceKm! / 1.60934 : s.distanceKm)
+                      : null,
+                ))
+            .toList();
+        cardioSets.add(CardioSetData());
+        entries.add(ExerciseEntry.fromExistingSets(
+          exerciseId: exerciseId,
+          exerciseName: exerciseName,
+          exerciseType: exerciseType,
+          initialSets: [],
+          initialCardioSets: cardioSets,
+        ));
+      } else {
+        final strengthSets = exerciseSets
+            .map((s) => SetData.fromExisting(
+                  existingId: s.id,
+                  weightKgValue: s.weightKg != null
+                      ? (useLbs ? s.weightKg! * 2.20462 : s.weightKg)
+                      : null,
+                  repsValue: s.reps,
+                ))
+            .toList();
+        strengthSets.add(SetData());
+        entries.add(ExerciseEntry.fromExistingSets(
+          exerciseId: exerciseId,
+          exerciseName: exerciseName,
+          exerciseType: exerciseType,
+          initialSets: strengthSets,
+          initialCardioSets: [],
+        ));
+      }
+
+      _preloadedExerciseIds.add(exerciseId);
+    }
+
+    if (mounted && entries.isNotEmpty) {
+      setState(() {
+        _exercises.addAll(entries);
+      });
     }
   }
 
@@ -333,48 +431,104 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     final repo = ref.read(workoutRepositoryProvider);
     final settings = ref.read(settingsProvider);
     final durationMinutes = DateTime.now().difference(_startTime).inMinutes;
+    const uuid = Uuid();
+    final now = DateTime.now();
 
     final sessionId = await repo.getOrCreateSession(_sessionDate);
     final existingSets = await repo.getSetsBySession(sessionId);
 
     for (final exercise in _exercises) {
-      final existingExerciseSets = existingSets
-          .where((s) => s.exerciseId == exercise.exerciseId)
-          .length;
-
-      if (exercise.isCardio) {
-        final validSets = exercise.validCardioSets;
-        for (int i = 0; i < validSets.length; i++) {
-          final setData = validSets[i];
-          final inputDistance = setData.distanceKm ?? 0;
-          final distanceKm = settings.useLbs
-              ? inputDistance * 1.60934
-              : inputDistance;
-
-          await repo.addSet(
+      if (_preloadedExerciseIds.contains(exercise.exerciseId)) {
+        if (exercise.isCardio) {
+          final validSets = exercise.validCardioSets;
+          final companions = <WorkoutSetsCompanion>[];
+          for (int i = 0; i < validSets.length; i++) {
+            final setData = validSets[i];
+            final inputDistance = setData.distanceKm ?? 0;
+            final distanceKm = settings.useLbs
+                ? inputDistance * 1.60934
+                : inputDistance;
+            companions.add(WorkoutSetsCompanion.insert(
+              id: setData.existingId ?? uuid.v4(),
+              sessionId: sessionId,
+              exerciseId: exercise.exerciseId,
+              setNumber: i + 1,
+              durationSeconds: Value(setData.durationSeconds),
+              distanceKm: Value(distanceKm),
+              createdAt: now,
+              updatedAt: now,
+            ));
+          }
+          await repo.replaceExerciseSets(
             sessionId: sessionId,
             exerciseId: exercise.exerciseId,
-            setNumber: existingExerciseSets + i + 1,
-            durationSeconds: setData.durationSeconds,
-            distanceKm: distanceKm,
+            newSets: companions,
+          );
+        } else {
+          final validSets = exercise.validSets;
+          final companions = <WorkoutSetsCompanion>[];
+          for (int i = 0; i < validSets.length; i++) {
+            final setData = validSets[i];
+            final inputWeight = setData.weightKg ?? 0;
+            final weightKg = settings.weightUnit == WeightUnit.lbs
+                ? inputWeight * 0.453592
+                : inputWeight;
+            companions.add(WorkoutSetsCompanion.insert(
+              id: setData.existingId ?? uuid.v4(),
+              sessionId: sessionId,
+              exerciseId: exercise.exerciseId,
+              setNumber: i + 1,
+              reps: Value(setData.reps ?? 0),
+              weightKg: Value(weightKg),
+              createdAt: now,
+              updatedAt: now,
+            ));
+          }
+          await repo.replaceExerciseSets(
+            sessionId: sessionId,
+            exerciseId: exercise.exerciseId,
+            newSets: companions,
           );
         }
       } else {
-        final validSets = exercise.validSets;
-        for (int i = 0; i < validSets.length; i++) {
-          final setData = validSets[i];
-          final inputWeight = setData.weightKg ?? 0;
-          final weightKg = settings.weightUnit == WeightUnit.lbs
-              ? inputWeight * 0.453592
-              : inputWeight;
+        final existingExerciseSets = existingSets
+            .where((s) => s.exerciseId == exercise.exerciseId)
+            .length;
 
-          await repo.addSet(
-            sessionId: sessionId,
-            exerciseId: exercise.exerciseId,
-            setNumber: existingExerciseSets + i + 1,
-            reps: setData.reps ?? 0,
-            weightKg: weightKg,
-          );
+        if (exercise.isCardio) {
+          final validSets = exercise.validCardioSets;
+          for (int i = 0; i < validSets.length; i++) {
+            final setData = validSets[i];
+            final inputDistance = setData.distanceKm ?? 0;
+            final distanceKm = settings.useLbs
+                ? inputDistance * 1.60934
+                : inputDistance;
+
+            await repo.addSet(
+              sessionId: sessionId,
+              exerciseId: exercise.exerciseId,
+              setNumber: existingExerciseSets + i + 1,
+              durationSeconds: setData.durationSeconds,
+              distanceKm: distanceKm,
+            );
+          }
+        } else {
+          final validSets = exercise.validSets;
+          for (int i = 0; i < validSets.length; i++) {
+            final setData = validSets[i];
+            final inputWeight = setData.weightKg ?? 0;
+            final weightKg = settings.weightUnit == WeightUnit.lbs
+                ? inputWeight * 0.453592
+                : inputWeight;
+
+            await repo.addSet(
+              sessionId: sessionId,
+              exerciseId: exercise.exerciseId,
+              setNumber: existingExerciseSets + i + 1,
+              reps: setData.reps ?? 0,
+              weightKg: weightKg,
+            );
+          }
         }
       }
     }

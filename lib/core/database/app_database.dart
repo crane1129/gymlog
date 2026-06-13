@@ -17,7 +17,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -66,6 +66,9 @@ class AppDatabase extends _$AppDatabase {
           ''');
           await customStatement('DROP TABLE workout_sets');
           await customStatement('ALTER TABLE workout_sets_new RENAME TO workout_sets');
+        }
+        if (from < 4) {
+          await m.addColumn(exercises, exercises.imagePath);
         }
       },
     );
