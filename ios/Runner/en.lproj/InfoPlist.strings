@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "Camera access is needed to take exercise photos.";
+"NSPhotoLibraryUsageDescription" = "Photo library access is needed to select exercise images or backup files.";

@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "운동 사진을 촬영하기 위해 카메라 접근이 필요합니다.";
+"NSPhotoLibraryUsageDescription" = "운동 이미지 또는 백업 파일을 선택하기 위해 사진 라이브러리 접근이 필요합니다.";

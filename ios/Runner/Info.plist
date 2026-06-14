@@ -26,8 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is needed to take exercise photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>데이터 백업 파일을 선택하기 위해 접근이 필요합니다.</string>
+	<string>Photo library access is needed to select exercise images or backup files.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

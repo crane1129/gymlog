@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/app_localizations.dart';
@@ -276,7 +277,9 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  void _showAboutDialog(BuildContext context, AppLocalizations l10n) {
+  Future<void> _showAboutDialog(BuildContext context, AppLocalizations l10n) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -289,7 +292,7 @@ class SettingsScreen extends ConsumerWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Image.asset(
-                  'assets/icons/app_icon.png',
+                  'assets/icons/app_icon_new.png',
                   width: 80,
                   height: 80,
                 ),
@@ -304,7 +307,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${l10n.version} 0.1.0',
+                '${l10n.version} ${packageInfo.version}',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/app_localizations.dart';
+import '../../../shared/theme/app_colors.dart';
 
 enum TimerMode { stopwatch, timer }
 
@@ -121,11 +122,18 @@ class TimerFloatingButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final timerState = ref.watch(timerProvider);
 
+    final Color bgColor;
+    if (timerState.isCompleted) {
+      bgColor = AppColors.secondary;
+    } else if (timerState.isRunning) {
+      bgColor = Theme.of(context).colorScheme.secondary;
+    } else {
+      bgColor = Theme.of(context).colorScheme.primary;
+    }
+
     return FloatingActionButton(
       onPressed: () => _showTimerSheet(context),
-      backgroundColor: timerState.isRunning
-          ? Theme.of(context).colorScheme.secondary
-          : Theme.of(context).colorScheme.primary,
+      backgroundColor: bgColor,
       child: timerState.isRunning
           ? Text(
               _formatDuration(
@@ -135,7 +143,9 @@ class TimerFloatingButton extends ConsumerWidget {
               ),
               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
             )
-          : const Icon(Icons.timer),
+          : timerState.isCompleted
+              ? const Icon(Icons.check)
+              : const Icon(Icons.timer),
     );
   }
 
@@ -162,12 +172,29 @@ class TimerSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final timerState = ref.watch(timerProvider);
     final notifier = ref.read(timerProvider.notifier);
+    final theme = Theme.of(context);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    final progress = _calculateProgress(timerState);
+    final progressColor = _getProgressColor(timerState, theme);
+    final textColor = _getTextColor(timerState, theme);
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(24, 12, 24, 16 + bottomPadding),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Center(
+            child: Container(
+              width: 32,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           SegmentedButton<TimerMode>(
             segments: [
               ButtonSegment(
@@ -186,7 +213,7 @@ class TimerSheet extends ConsumerWidget {
               notifier.setMode(selected.first);
             },
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
@@ -195,49 +222,144 @@ class TimerSheet extends ConsumerWidget {
                     ? timerState.remaining
                     : timerState.elapsed,
               ),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 48,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
                 fontFamily: 'monospace',
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: textColor,
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation(progressColor),
             ),
           ),
           const SizedBox(height: 24),
           if (timerState.mode == TimerMode.timer) ...[
             Wrap(
-              spacing: 8,
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
               children: [30, 60, 90, 120, 180].map((seconds) {
-                return ChoiceChip(
-                  label: Text('${seconds}s'),
-                  selected: timerState.targetDuration?.inSeconds == seconds,
+                final isSelected =
+                    timerState.targetDuration?.inSeconds == seconds;
+                return FilterChip(
+                  label: Text(_formatSeconds(seconds)),
+                  selected: isSelected,
                   onSelected: (_) {
                     notifier.setTargetDuration(Duration(seconds: seconds));
                   },
+                  showCheckmark: false,
+                  shape: const StadiumBorder(),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  selectedColor:
+                      theme.colorScheme.primary.withValues(alpha: 0.15),
+                  labelStyle: TextStyle(
+                    color: isSelected ? theme.colorScheme.primary : null,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
                 );
               }).toList(),
             ),
             const SizedBox(height: 24),
           ],
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton.filled(
-                iconSize: 32,
-                onPressed: timerState.isRunning ? notifier.pause : notifier.start,
-                icon: Icon(timerState.isRunning ? Icons.pause : Icons.play_arrow),
-              ),
-              const SizedBox(width: 16),
-              IconButton.outlined(
-                iconSize: 32,
-                onPressed: notifier.reset,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+          _buildControlRow(timerState, notifier, theme),
+          const SizedBox(height: 8),
         ],
       ),
     );
+  }
+
+  Widget _buildControlRow(
+    TimerState timerState,
+    TimerNotifier notifier,
+    ThemeData theme,
+  ) {
+    final IconData playIcon;
+    final VoidCallback playAction;
+    final Color playColor;
+
+    if (timerState.isCompleted) {
+      playIcon = Icons.replay;
+      playAction = notifier.reset;
+      playColor = AppColors.secondary;
+    } else if (timerState.isRunning) {
+      playIcon = Icons.pause;
+      playAction = notifier.pause;
+      playColor = theme.colorScheme.secondary;
+    } else {
+      playIcon = Icons.play_arrow;
+      playAction = notifier.start;
+      playColor = theme.colorScheme.primary;
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton.filledTonal(
+          onPressed: notifier.reset,
+          icon: const Icon(Icons.refresh),
+          iconSize: 22,
+          style: IconButton.styleFrom(
+            minimumSize: const Size(40, 40),
+          ),
+        ),
+        const SizedBox(width: 24),
+        ElevatedButton(
+          onPressed: playAction,
+          style: ElevatedButton.styleFrom(
+            shape: const CircleBorder(),
+            minimumSize: const Size(56, 56),
+            backgroundColor: playColor,
+            foregroundColor: Colors.white,
+            elevation: 3,
+            shadowColor: playColor.withValues(alpha: 0.4),
+          ),
+          child: Icon(playIcon, size: 28),
+        ),
+        const SizedBox(width: 24),
+        const SizedBox(width: 40, height: 40),
+      ],
+    );
+  }
+
+  double _calculateProgress(TimerState state) {
+    if (state.mode == TimerMode.timer) {
+      if (state.targetDuration == null ||
+          state.targetDuration!.inMilliseconds == 0) {
+        return 0.0;
+      }
+      return (state.elapsed.inMilliseconds /
+              state.targetDuration!.inMilliseconds)
+          .clamp(0.0, 1.0);
+    }
+    return (state.elapsed.inMilliseconds % 60000) / 60000;
+  }
+
+  Color _getProgressColor(TimerState state, ThemeData theme) {
+    if (state.isCompleted) return AppColors.secondary;
+    if (!state.isRunning && state.elapsed != Duration.zero) {
+      return theme.colorScheme.primary.withValues(alpha: 0.5);
+    }
+    return theme.colorScheme.primary;
+  }
+
+  Color _getTextColor(TimerState state, ThemeData theme) {
+    if (state.isCompleted) return AppColors.secondary;
+    if (state.isRunning) return theme.colorScheme.primary;
+    if (!state.isRunning && state.elapsed != Duration.zero) {
+      return theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    }
+    return theme.colorScheme.onSurface;
   }
 
   String _formatDurationLong(Duration d) {
@@ -249,5 +371,14 @@ class TimerSheet extends ConsumerWidget {
       return '$hours:$minutes:$seconds';
     }
     return '$minutes:$seconds.$tenths';
+  }
+
+  String _formatSeconds(int seconds) {
+    if (seconds >= 60) {
+      final mins = seconds ~/ 60;
+      final secs = seconds % 60;
+      return secs > 0 ? '${mins}m ${secs}s' : '${mins}m';
+    }
+    return '${seconds}s';
   }
 }
