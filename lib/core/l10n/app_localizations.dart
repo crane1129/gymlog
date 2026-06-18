@@ -242,6 +242,15 @@ class AppLocalizations {
   String get updateNow => isKorean ? '업데이트' : 'Update';
   String get updateLater => isKorean ? '나중에' : 'Later';
   String get updateIgnore => isKorean ? '이 버전 무시' : 'Ignore';
+  String get checkForUpdates => isKorean ? '업데이트 확인' : 'Check for Updates';
+  String get checkingForUpdates => isKorean ? '업데이트 확인 중...' : 'Checking for updates...';
+  String get noUpdateAvailable => isKorean ? '최신 버전' : 'Up to Date';
+  String alreadyUpToDate(String version) => isKorean
+      ? '현재 최신 버전($version)을 사용 중입니다.'
+      : 'You are using the latest version ($version).';
+  String get updateCheckFailed => isKorean
+      ? '업데이트 확인에 실패했습니다.\n인터넷 연결을 확인해주세요.'
+      : 'Failed to check for updates.\nPlease check your internet connection.';
 }
 
 class _AppLocalizationsDelegate

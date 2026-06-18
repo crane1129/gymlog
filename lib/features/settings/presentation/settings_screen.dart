@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:upgrader/upgrader.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/app_localizations.dart';
@@ -82,6 +83,12 @@ class SettingsScreen extends ConsumerWidget {
             title: Text(l10n.about),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showAboutDialog(context, l10n),
+          ),
+          ListTile(
+            leading: const Icon(Icons.system_update),
+            title: Text(l10n.checkForUpdates),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _checkForUpdates(context, l10n),
           ),
           const Divider(),
           ListTile(
@@ -347,6 +354,98 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _checkForUpdates(BuildContext context, AppLocalizations l10n) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    Upgrader? upgrader;
+    try {
+      upgrader = Upgrader(
+        storeController: UpgraderStoreController(
+          onAndroid: () => UpgraderPlayStore(),
+          oniOS: () => UpgraderAppStore(),
+        ),
+      );
+
+      await upgrader.initialize();
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+
+      final isAvailable = upgrader.isUpdateAvailable();
+      final installedVersion = upgrader.currentInstalledVersion ?? '';
+      final storeVersion = upgrader.currentAppStoreVersion ?? '';
+
+      if (isAvailable) {
+        final localUpgrader = upgrader;
+        upgrader = null;
+
+        if (!context.mounted) return;
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(l10n.updateAvailable),
+            content: Text(l10n.updateMessage(installedVersion, storeVersion)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  localUpgrader.dispose();
+                },
+                child: Text(l10n.updateLater),
+              ),
+              FilledButton(
+                onPressed: () {
+                  localUpgrader.sendUserToAppStore();
+                  Navigator.pop(dialogContext);
+                  localUpgrader.dispose();
+                },
+                child: Text(l10n.updateNow),
+              ),
+            ],
+          ),
+        );
+      } else {
+        if (!context.mounted) return;
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(l10n.noUpdateAvailable),
+            content: Text(l10n.alreadyUpToDate(installedVersion)),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(l10n.confirm),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(l10n.error),
+            content: Text(l10n.updateCheckFailed),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(l10n.confirm),
+              ),
+            ],
+          ),
+        );
+      }
+    } finally {
+      upgrader?.dispose();
+    }
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value, {bool isLink = false}) {
