@@ -12,7 +12,7 @@ Checking for npm/bin/npm-cli install at /snapshot/firepit/node_modules/npm/bin/n
 Found npm/bin/npm-cli install.
 Runtime binaries created.
 /usr/local/bin/firebase
-/usr/local/bin/firebase,/snapshot/firepit/firepit.js,/Users/haksoo.kim/.cache/firebase/runtime/node.js,/Users/haksoo.kim/.claude/plugins/cache/omc/oh-my-claudecode/4.14.5/scripts/run.cjs,/Users/haksoo.kim/.claude/plugins/cache/omc/oh-my-claudecode/4.14.5/scripts/persistent-mode.mjs
+/usr/local/bin/firebase,/snapshot/firepit/firepit.js,/Users/haksoo.kim/.cache/firebase/runtime/node.js,/Users/haksoo.kim/.claude/plugins/cache/omc/oh-my-claudecode/4.14.5/scripts/run.cjs,/Users/haksoo.kim/.claude/plugins/cache/omc/oh-my-claudecode/4.14.5/scripts/post-tool-verifier.mjs
 Checking for npm/bin/npm-cli install at /Users/haksoo.kim/.cache/firebase/tools/lib/node_modules/npm/bin/npm-cli
 Checking for npm/bin/npm-cli install at /Users/haksoo.kim/.cache/firebase/tools/node_modules/npm/bin/npm-cli
 Checking for npm/bin/npm-cli install at /snapshot/firepit/node_modules/npm/bin/npm-cli
@@ -21,4 +21,4 @@ Checking for npm/bin/npm-cli install at /Users/haksoo.kim/.cache/firebase/tools/
 Checking for npm/bin/npm-cli install at /Users/haksoo.kim/.cache/firebase/tools/node_modules/npm/bin/npm-cli
 Checking for npm/bin/npm-cli install at /snapshot/firepit/node_modules/npm/bin/npm-cli
 Found npm/bin/npm-cli install.
-ShellJSInternalError: ENOENT: no such file or directory, chmod '/Users/haksoo.kim/.cache/firebase/runtime/node'
+ShellJSInternalError: ENOENT: no such file or directory, stat '/Users/haksoo.kim/.cache/firebase/runtime/node'
