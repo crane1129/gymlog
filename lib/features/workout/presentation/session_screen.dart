@@ -201,7 +201,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     }
     if (widget.isEditMode) {
       _initEditMode();
-    } else if (widget.initialDate == null) {
+    } else {
       _loadTodaysExercises();
     }
   }
@@ -491,43 +491,96 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
           );
         }
       } else {
-        final existingExerciseSets = existingSets
-            .where((s) => s.exerciseId == exercise.exerciseId)
-            .length;
+        final hasExistingSets = existingSets
+            .any((s) => s.exerciseId == exercise.exerciseId);
 
-        if (exercise.isCardio) {
-          final validSets = exercise.validCardioSets;
-          for (int i = 0; i < validSets.length; i++) {
-            final setData = validSets[i];
-            final inputDistance = setData.distanceKm ?? 0;
-            final distanceKm = settings.useLbs
-                ? inputDistance * 1.60934
-                : inputDistance;
-
-            await repo.addSet(
+        if (hasExistingSets) {
+          if (exercise.isCardio) {
+            final validSets = exercise.validCardioSets;
+            final companions = <WorkoutSetsCompanion>[];
+            for (int i = 0; i < validSets.length; i++) {
+              final setData = validSets[i];
+              final inputDistance = setData.distanceKm ?? 0;
+              final distanceKm = settings.useLbs
+                  ? inputDistance * 1.60934
+                  : inputDistance;
+              companions.add(WorkoutSetsCompanion.insert(
+                id: setData.existingId ?? uuid.v4(),
+                sessionId: sessionId,
+                exerciseId: exercise.exerciseId,
+                setNumber: i + 1,
+                durationSeconds: Value(setData.durationSeconds),
+                distanceKm: Value(distanceKm),
+                createdAt: now,
+                updatedAt: now,
+              ));
+            }
+            await repo.replaceExerciseSets(
               sessionId: sessionId,
               exerciseId: exercise.exerciseId,
-              setNumber: existingExerciseSets + i + 1,
-              durationSeconds: setData.durationSeconds,
-              distanceKm: distanceKm,
+              newSets: companions,
+            );
+          } else {
+            final validSets = exercise.validSets;
+            final companions = <WorkoutSetsCompanion>[];
+            for (int i = 0; i < validSets.length; i++) {
+              final setData = validSets[i];
+              final inputWeight = setData.weightKg ?? 0;
+              final weightKg = settings.weightUnit == WeightUnit.lbs
+                  ? inputWeight * 0.453592
+                  : inputWeight;
+              companions.add(WorkoutSetsCompanion.insert(
+                id: setData.existingId ?? uuid.v4(),
+                sessionId: sessionId,
+                exerciseId: exercise.exerciseId,
+                setNumber: i + 1,
+                reps: Value(setData.reps ?? 0),
+                weightKg: Value(weightKg),
+                createdAt: now,
+                updatedAt: now,
+              ));
+            }
+            await repo.replaceExerciseSets(
+              sessionId: sessionId,
+              exerciseId: exercise.exerciseId,
+              newSets: companions,
             );
           }
         } else {
-          final validSets = exercise.validSets;
-          for (int i = 0; i < validSets.length; i++) {
-            final setData = validSets[i];
-            final inputWeight = setData.weightKg ?? 0;
-            final weightKg = settings.weightUnit == WeightUnit.lbs
-                ? inputWeight * 0.453592
-                : inputWeight;
+          if (exercise.isCardio) {
+            final validSets = exercise.validCardioSets;
+            for (int i = 0; i < validSets.length; i++) {
+              final setData = validSets[i];
+              final inputDistance = setData.distanceKm ?? 0;
+              final distanceKm = settings.useLbs
+                  ? inputDistance * 1.60934
+                  : inputDistance;
 
-            await repo.addSet(
-              sessionId: sessionId,
-              exerciseId: exercise.exerciseId,
-              setNumber: existingExerciseSets + i + 1,
-              reps: setData.reps ?? 0,
-              weightKg: weightKg,
-            );
+              await repo.addSet(
+                sessionId: sessionId,
+                exerciseId: exercise.exerciseId,
+                setNumber: i + 1,
+                durationSeconds: setData.durationSeconds,
+                distanceKm: distanceKm,
+              );
+            }
+          } else {
+            final validSets = exercise.validSets;
+            for (int i = 0; i < validSets.length; i++) {
+              final setData = validSets[i];
+              final inputWeight = setData.weightKg ?? 0;
+              final weightKg = settings.weightUnit == WeightUnit.lbs
+                  ? inputWeight * 0.453592
+                  : inputWeight;
+
+              await repo.addSet(
+                sessionId: sessionId,
+                exerciseId: exercise.exerciseId,
+                setNumber: i + 1,
+                reps: setData.reps ?? 0,
+                weightKg: weightKg,
+              );
+            }
           }
         }
       }
