@@ -1,6 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../shared/theme/app_spacing.dart';
+import '../../../../shared/theme/app_typo.dart';
 import '../../domain/exercise_progress.dart';
 
 class ExerciseProgressChart extends StatelessWidget {
@@ -166,7 +168,7 @@ class ExerciseProgressChart extends StatelessWidget {
                   if (index >= 0 && index < points.length) {
                     final date = points[index].date;
                     return Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
                       child: Text(
                         '${date.month}/${date.day}',
                         style: TextStyle(
@@ -213,7 +215,7 @@ class ExerciseProgressChart extends StatelessWidget {
                     TextStyle(
                       color: spot.bar.color,
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: AppTypo.bodySm,
                     ),
                   );
                 }).toList();

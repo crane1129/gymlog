@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/exercise_category.dart';
+
 class AppColors {
-  // Primary
-  static const primary = Color(0xFF2196F3);
-  static const primaryDark = Color(0xFF1976D2);
-  static const primaryLight = Color(0xFFBBDEFB);
+  // Primary — brand orange
+  static const primary = Color(0xFFF66C1E);
+  static const primaryDark = Color(0xFFD4580F);
+  static const primaryLight = Color(0xFFFDB288);
 
-  // Secondary
-  static const secondary = Color(0xFF4CAF50);
-  static const secondaryDark = Color(0xFF388E3C);
+  // Secondary — brand lime accent
+  static const secondary = Color(0xFFC8FF00);
+  static const secondaryDark = Color(0xFF9ACC00);
 
-  // Brand (from app icon)
+  // Success
+  static const success = Color(0xFF4CAF50);
+  static const successDark = Color(0xFF388E3C);
+
+  // Brand
   static const brandBackground = Color(0xFF0D0D12);
   static const brandOrange = Color(0xFFF66C1E);
   static const brandAccent = Color(0xFFC8FF00);
@@ -37,27 +43,6 @@ class AppColors {
   static const other = Color(0xFF757575);
 
   static Color getCategoryColor(String category) {
-    switch (category) {
-      case '가슴':
-      case 'Chest':
-        return chest;
-      case '등':
-      case 'Back':
-        return back;
-      case '하체':
-      case 'Legs':
-        return legs;
-      case '어깨':
-      case 'Shoulders':
-        return shoulders;
-      case '팔':
-      case 'Arms':
-        return arms;
-      case '유산소':
-      case 'Cardio':
-        return cardio;
-      default:
-        return other;
-    }
+    return ExerciseCategory.fromString(category).color;
   }
 }

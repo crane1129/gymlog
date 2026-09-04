@@ -12,6 +12,9 @@ import '../../exercise/data/exercise_repository.dart';
 import '../../exercise/presentation/exercise_picker_screen.dart';
 import '../../settings/data/settings_repository.dart';
 import '../data/workout_repository.dart';
+import '../../../shared/theme/app_radius.dart';
+import '../../../shared/theme/app_spacing.dart';
+import '../../../shared/theme/app_typo.dart';
 
 class SetData {
   final String? existingId;
@@ -364,10 +367,11 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   }
 
   void _addExercise() async {
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => const ExercisePickerScreen(),
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => const ExercisePickerScreen(),
+      ),
     );
 
     if (result != null && mounted) {
@@ -759,14 +763,14 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
             ? Text(l10n.editSets)
             : InkWell(
                 onTap: _selectDate,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadius.smAll,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(l10n.workoutDateTitle(_sessionDate.month, _sessionDate.day)),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: AppSpacing.xs),
                       const Icon(Icons.calendar_today, size: 18),
                     ],
                   ),
@@ -781,7 +785,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
             ),
           if (_isSaving)
             const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(AppSpacing.md),
               child: SizedBox(
                 width: 20,
                 height: 20,
@@ -811,12 +815,12 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                     size: 64,
                     color: Colors.grey,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     l10n.addExercisePrompt,
-                    style: const TextStyle(color: Colors.grey, fontSize: 16),
+                    style: const TextStyle(color: Colors.grey, fontSize: AppTypo.bodyLg),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                   FilledButton.icon(
                     onPressed: _addExercise,
                     icon: const Icon(Icons.add),
@@ -826,7 +830,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.md),
               itemCount: _exercises.length,
               itemBuilder: (context, index) {
                 final exercise = _exercises[index];
@@ -845,9 +849,9 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     final unitLabel = settings.weightUnit == WeightUnit.kg ? 'kg' : 'lbs';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -857,7 +861,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                   child: Text(
                     exercise.exerciseName,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: AppTypo.titleSm,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -868,18 +872,18 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 SizedBox(width: 40, child: Text(l10n.set, style: const TextStyle(fontWeight: FontWeight.bold))),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(child: Text(unitLabel, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold))),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(child: Text(l10n.reps, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold))),
                 const SizedBox(width: 40),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             ...exercise.sets.asMap().entries.map((entry) {
               final setIndex = entry.key;
               final setData = entry.value;
@@ -897,21 +901,21 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     final distanceUnit = settings.useLbs ? 'mi' : 'km';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 const Icon(Icons.directions_run, size: 20, color: Colors.orange),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     exercise.exerciseName,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: AppTypo.titleSm,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -922,18 +926,18 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 SizedBox(width: 40, child: Text(l10n.set, style: const TextStyle(fontWeight: FontWeight.bold))),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(child: Text(l10n.durationMin, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold))),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(child: Text(distanceUnit, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold))),
                 const SizedBox(width: 40),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             ...exercise.cardioSets.asMap().entries.map((entry) {
               final setIndex = entry.key;
               final setData = entry.value;
@@ -954,10 +958,10 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
             width: 40,
             child: Text(
               '${setIndex + 1}',
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: AppTypo.bodyLg),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: TextField(
               controller: setData.weightController,
@@ -965,12 +969,12 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
               ),
               onChanged: (_) => _onSetChanged(exercise, setIndex),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: TextField(
               controller: setData.repsController,
@@ -978,7 +982,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
               ),
               onChanged: (_) => _onSetChanged(exercise, setIndex),
             ),
@@ -1008,10 +1012,10 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
             width: 40,
             child: Text(
               '${setIndex + 1}',
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: AppTypo.bodyLg),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: TextField(
               controller: setData.durationController,
@@ -1019,12 +1023,12 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
               ),
               onChanged: (_) => _onCardioSetChanged(exercise, setIndex),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: TextField(
               controller: setData.distanceController,
@@ -1032,7 +1036,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
               ),
               onChanged: (_) => _onCardioSetChanged(exercise, setIndex),
             ),

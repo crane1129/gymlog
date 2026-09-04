@@ -32,6 +32,7 @@ class AppLocalizations {
   String get navTimer => isKorean ? '타이머' : 'Timer';
   String get navProgress => isKorean ? '통계' : 'Progress';
   String get navBody => isKorean ? '바디' : 'Body';
+  String get navSettings => isKorean ? '설정' : 'Settings';
 
   // Home Screen
   String get startWorkout => isKorean ? '운동 시작' : 'Start Workout';
@@ -110,6 +111,10 @@ class AppLocalizations {
   String get weightSaved => isKorean ? '체중이 기록되었습니다' : 'Weight recorded';
   String get bmiTitle => isKorean ? 'BMI 지수' : 'BMI Index';
   String get bmiDescription => isKorean ? '체질량지수 (Body Mass Index)' : 'Body Mass Index';
+  String get bmiUnderweight => isKorean ? '저체중' : 'Underweight';
+  String get bmiNormal => isKorean ? '정상' : 'Normal';
+  String get bmiOverweight => isKorean ? '과체중' : 'Overweight';
+  String get bmiObese => isKorean ? '비만' : 'Obese';
   String get recentRecords => isKorean ? '최근 기록' : 'Recent Records';
 
   // Progress Screen
@@ -128,6 +133,7 @@ class AppLocalizations {
   String get maxWeight => isKorean ? '최고 무게' : 'Max Weight';
   String get maxReps => isKorean ? '최고 횟수' : 'Max Reps';
   String get noExerciseData => isKorean ? '이 기간의 운동 데이터가 없습니다' : 'No exercise data for this period';
+  String get noWorkoutRecordsForPeriod => isKorean ? '이 기간의 운동 기록이 없습니다' : 'No workout records for this period';
   String get weightProgress => isKorean ? '무게 진행' : 'Weight Progress';
   String get repsProgress => isKorean ? '횟수 진행' : 'Reps Progress';
   String changeFormat(String value) => isKorean ? '$value 변화' : '$value change';
@@ -188,8 +194,16 @@ class AppLocalizations {
 
   // Exercise Picker
   String get selectExercise => isKorean ? '운동 선택' : 'Select Exercise';
+  String get allCategories => isKorean ? '전체' : 'All';
   String get searchExercise => isKorean ? '운동 검색' : 'Search exercise';
   String get noExercisesFound => isKorean ? '운동을 찾을 수 없습니다' : 'No exercises found';
+  String get recentExercises => isKorean ? '최근' : 'Recent';
+  String get favoriteExercises => isKorean ? '즐겨찾기' : 'Favorites';
+  String get allExercises => isKorean ? '전체' : 'All';
+  String get noRecentExercises => isKorean ? '최근 사용한 운동이 없습니다' : 'No recent exercises';
+  String get noFavoriteExercises => isKorean ? '즐겨찾기한 운동이 없습니다' : 'No favorite exercises';
+  String get addFavoriteHint => isKorean ? '★ 아이콘을 눌러 즐겨찾기에 추가하세요' : 'Tap ★ to add favorites';
+  String get recentExercisesTitle => isKorean ? '최근 운동' : 'Recent Exercises';
 
   // Timer
   String get stopwatch => isKorean ? '스톱워치' : 'Stopwatch';

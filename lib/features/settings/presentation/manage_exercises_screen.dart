@@ -8,10 +8,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/constants/default_exercises.dart';
+import '../../../core/constants/exercise_category.dart';
 import '../../../core/constants/exercise_type.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../../shared/theme/app_radius.dart';
+import '../../../shared/theme/app_spacing.dart';
+import '../../../shared/theme/app_typo.dart';
 import '../../exercise/data/exercise_repository.dart';
 
 final exercisesStreamProvider = StreamProvider<List<Exercise>>((ref) {
@@ -32,13 +36,23 @@ Future<String?> _saveExerciseImage(XFile pickedFile) async {
   return savedPath;
 }
 
-class ManageExercisesScreen extends ConsumerWidget {
+class ManageExercisesScreen extends ConsumerStatefulWidget {
   const ManageExercisesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ManageExercisesScreen> createState() =>
+      _ManageExercisesScreenState();
+}
+
+class _ManageExercisesScreenState extends ConsumerState<ManageExercisesScreen> {
+  String? _selectedCategory;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final exercisesAsync = ref.watch(exercisesStreamProvider);
+    final categories = ExerciseCategories.get(l10n.isKorean);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -48,101 +62,134 @@ class ManageExercisesScreen extends ConsumerWidget {
         onPressed: () => _showAddExerciseDialog(context, ref, l10n),
         child: const Icon(Icons.add),
       ),
-      body: exercisesAsync.when(
-        data: (exercises) => _buildExerciseList(context, ref, l10n, exercises),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(l10n.error)),
+      body: Column(
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                _buildCategoryChip(null, l10n.allCategories, l10n.isKorean),
+                ...categories.map((cat) =>
+                    _buildCategoryChip(cat, cat, l10n.isKorean)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: exercisesAsync.when(
+              data: (exercises) =>
+                  _buildExerciseGrid(context, ref, l10n, exercises, theme),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text(l10n.error)),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildExerciseList(
+  Widget _buildCategoryChip(
+    String? category,
+    String label,
+    bool isKorean,
+  ) {
+    final isSelected = _selectedCategory == category;
+    Color? chipColor;
+    if (category != null) {
+      chipColor = ExerciseCategory.fromString(category).color;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.sm),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        avatar: chipColor != null && !isSelected
+            ? Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: chipColor,
+                  shape: BoxShape.circle,
+                ),
+              )
+            : null,
+        onSelected: (_) {
+          setState(() => _selectedCategory = category);
+        },
+      ),
+    );
+  }
+
+  Widget _buildExerciseGrid(
     BuildContext context,
     WidgetRef ref,
     AppLocalizations l10n,
     List<Exercise> exercises,
+    ThemeData theme,
   ) {
-    final categories = l10n.isKorean ? ExerciseCategories.ko : ExerciseCategories.en;
-    final groupedExercises = <String, List<Exercise>>{};
-
-    for (final category in categories) {
-      groupedExercises[category] = exercises
-          .where((e) {
-            final displayCategory = DefaultExerciseHelper.getDisplayCategory(
-              e.id,
-              e.category,
-              l10n.isKorean,
-            );
-            return displayCategory == category;
-          })
-          .toList();
+    var filtered = exercises;
+    if (_selectedCategory != null) {
+      filtered = exercises.where((e) {
+        final displayCategory = DefaultExerciseHelper.getDisplayCategory(
+          e.id,
+          e.category,
+          l10n.isKorean,
+        );
+        return displayCategory == _selectedCategory;
+      }).toList();
     }
 
-    return ListView.builder(
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        final categoryExercises = groupedExercises[category] ?? [];
-
-        if (categoryExercises.isEmpty) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    if (filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: AppColors.getCategoryColor(
-                        l10n.isKorean ? category : ExerciseCategories.translate(category, true),
-                      ),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    category,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '(${categoryExercises.length})',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
+            Icon(Icons.fitness_center, size: 56, color: Colors.grey[400]),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.noExercisesFound,
+              style: TextStyle(fontSize: AppTypo.bodyLg, color: Colors.grey[600]),
             ),
-            ...categoryExercises.map((exercise) => _buildExerciseTile(
-                  context,
-                  ref,
-                  l10n,
-                  exercise,
-                )),
           ],
-        );
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.85,
+        crossAxisSpacing: AppSpacing.sm,
+        mainAxisSpacing: AppSpacing.sm,
+      ),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        final exercise = filtered[index];
+        return _buildExerciseCard(context, ref, l10n, exercise, theme);
       },
     );
   }
 
-  Widget _buildExerciseTile(
+  Widget _buildExerciseCard(
     BuildContext context,
     WidgetRef ref,
     AppLocalizations l10n,
     Exercise exercise,
+    ThemeData theme,
   ) {
     final displayName = DefaultExerciseHelper.getDisplayName(
       exercise.id,
       exercise.name,
+      l10n.isKorean,
+    );
+    final displayCategory = DefaultExerciseHelper.getDisplayCategory(
+      exercise.id,
+      exercise.category,
       l10n.isKorean,
     );
     final displayMuscleGroup = DefaultExerciseHelper.getDisplayMuscleGroup(
@@ -150,55 +197,137 @@ class ManageExercisesScreen extends ConsumerWidget {
       exercise.muscleGroup,
       l10n.isKorean,
     );
+    final categoryColor = AppColors.getCategoryColor(exercise.category);
+    final hasImage =
+        exercise.imagePath != null && File(exercise.imagePath!).existsSync();
 
-    return ListTile(
-      leading: exercise.imagePath != null && File(exercise.imagePath!).existsSync()
-          ? CircleAvatar(
-              backgroundImage: FileImage(File(exercise.imagePath!)),
-            )
-          : CircleAvatar(
-              backgroundColor: AppColors.getCategoryColor(exercise.category),
-              child: Text(
-                displayName[0],
-                style: const TextStyle(color: Colors.white),
-              ),
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () =>
+            _showEditExerciseDialog(context, ref, l10n, exercise),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              flex: 3,
+              child: hasImage
+                  ? Image.file(
+                      File(exercise.imagePath!),
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      color: categoryColor.withValues(alpha: 0.12),
+                      child: Center(
+                        child: Text(
+                          displayName[0],
+                          style: TextStyle(
+                            fontSize: AppTypo.displayLg,
+                            fontWeight: FontWeight.bold,
+                            color: categoryColor,
+                          ),
+                        ),
+                      ),
+                    ),
             ),
-      title: Text(displayName),
-      subtitle: displayMuscleGroup.isNotEmpty
-          ? Text(
-              displayMuscleGroup,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            )
-          : null,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (!exercise.isDefault)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                l10n.customExercise,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.primary,
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.sm, AppSpacing.sm, AppSpacing.xs, AppSpacing.xs,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: categoryColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            displayCategory,
+                            style: TextStyle(
+                              fontSize: AppTypo.caption,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontSize: AppTypo.bodyMd,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (displayMuscleGroup.isNotEmpty) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        displayMuscleGroup,
+                        style: TextStyle(
+                          fontSize: AppTypo.caption,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (!exercise.isDefault)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: AppRadius.smAll,
+                            ),
+                            child: Text(
+                              l10n.customExercise,
+                              style: TextStyle(
+                                fontSize: AppTypo.overline,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        const Spacer(),
+                        if (!exercise.isDefault)
+                          InkWell(
+                            onTap: () =>
+                                _showDeleteDialog(context, ref, l10n, exercise),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
-          if (!exercise.isDefault) const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.edit, size: 20),
-            onPressed: () => _showEditExerciseDialog(context, ref, l10n, exercise),
-          ),
-          if (!exercise.isDefault)
-            IconButton(
-              icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-              onPressed: () => _showDeleteDialog(context, ref, l10n, exercise),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -226,7 +355,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                 _buildImagePicker(context, l10n, pickedImagePath, (path) {
                   setState(() => pickedImagePath = path);
                 }),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
@@ -234,7 +363,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                   ),
                   autofocus: true,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   value: selectedCategory,
                   decoration: InputDecoration(
@@ -249,7 +378,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                     }
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: muscleGroupController,
                   decoration: InputDecoration(
@@ -279,7 +408,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                 }
 
                 final repo = ref.read(exerciseRepositoryProvider);
-                final isCardio = selectedCategory == '유산소' || selectedCategory == 'Cardio';
+                final isCardio = ExerciseCategory.fromString(selectedCategory) == ExerciseCategory.cardio;
                 await repo.createExercise(
                   name: nameController.text.trim(),
                   category: selectedCategory,
@@ -340,7 +469,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                     imageRemoved = path == null;
                   });
                 }, showRemove: currentImagePath != null),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
@@ -348,7 +477,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                   ),
                   enabled: !exercise.isDefault,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   value: selectedCategory,
                   decoration: InputDecoration(
@@ -365,7 +494,7 @@ class ManageExercisesScreen extends ConsumerWidget {
                           }
                         },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: muscleGroupController,
                   decoration: InputDecoration(
@@ -497,11 +626,11 @@ class ManageExercisesScreen extends ConsumerWidget {
         );
       },
       child: Container(
-        width: 100,
-        height: 100,
+        width: 120,
+        height: 120,
         decoration: BoxDecoration(
           color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.lgAll,
           image: hasImage
               ? DecorationImage(
                   image: FileImage(File(currentImagePath)),
@@ -514,11 +643,11 @@ class ManageExercisesScreen extends ConsumerWidget {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_a_photo, size: 32, color: Colors.grey[500]),
-                  const SizedBox(height: 4),
+                  Icon(Icons.add_a_photo, size: 36, color: Colors.grey[500]),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     l10n.exercisePhoto,
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: AppTypo.bodySm, color: Colors.grey[500]),
                   ),
                 ],
               ),

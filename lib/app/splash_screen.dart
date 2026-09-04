@@ -6,6 +6,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../core/l10n/app_localizations.dart';
 import '../features/exercise/data/exercise_repository.dart';
 import '../shared/theme/app_colors.dart';
+import '../shared/theme/app_spacing.dart';
+import '../shared/theme/app_typo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -130,7 +132,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: AppSpacing.xl + AppSpacing.sm),
             AnimatedBuilder(
               animation: _textController,
               builder: (context, child) {
@@ -150,17 +152,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       Text(
                         l10n.splashTagline,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: AppTypo.bodyLg,
                           color: Colors.white.withValues(alpha: 0.9),
                           letterSpacing: 1,
                         ),
                       ),
                       if (_version.isNotEmpty) ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
                           _version,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: AppTypo.bodySm,
                             color: Colors.white.withValues(alpha: 0.6),
                           ),
                         ),

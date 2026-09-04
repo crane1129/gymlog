@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/l10n/app_localizations.dart';
+import '../../../shared/theme/app_radius.dart';
+import '../../../shared/theme/app_spacing.dart';
+import '../../../shared/theme/app_typo.dart';
 import '../../settings/data/settings_repository.dart';
 import '../data/body_repository.dart';
 
@@ -173,27 +176,27 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
         title: Text(l10n.body),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (settings.heightCm != null)
               _buildBmiCard(settings, recordsAsync, l10n),
-            if (settings.heightCm != null) const SizedBox(height: 16),
+            if (settings.heightCm != null) const SizedBox(height: AppSpacing.md),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       l10n.weightRecord,
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: AppTypo.titleSm,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     if (settings.heightCm == null) ...[
                       TextField(
                         controller: _heightController,
@@ -204,7 +207,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                           helperText: l10n.heightHelperText,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.md),
                     ],
                     InkWell(
                       onTap: _selectDate,
@@ -218,7 +221,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     TextField(
                       controller: _weightController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -227,7 +230,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                         prefixIcon: const Icon(Icons.monitor_weight),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.lg),
                     FilledButton(
                       onPressed: _isSaving ? null : _saveRecord,
                       child: _isSaving
@@ -242,10 +245,10 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -255,7 +258,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                         Text(
                           l10n.weightTrend,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: AppTypo.titleSm,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -265,12 +268,12 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                             icon: const Icon(Icons.height, size: 18),
                             label: Text(
                               '${settings.displayHeight.toStringAsFixed(settings.useMetric ? 0 : 1)} ${settings.heightUnitLabel}',
-                              style: const TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: AppTypo.bodySm),
                             ),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     recordsAsync.when(
                       loading: () => const SizedBox(
                         height: 200,
@@ -286,7 +289,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             recordsAsync.when(
               loading: () => const SizedBox(),
               error: (_, __) => const SizedBox(),
@@ -309,23 +312,23 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
         final bmi = settings.calculateBmi(latestRecord.weightKg);
         if (bmi == null) return const SizedBox();
 
-        final category = settings.getBmiCategory(bmi, l10n.isKorean);
+        final category = _getBmiCategoryLabel(bmi, l10n);
         final color = _getBmiColor(bmi);
 
         return Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   l10n.bmiTitle,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: AppTypo.titleSm,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
                     Container(
@@ -340,7 +343,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                         child: Text(
                           bmi.toStringAsFixed(1),
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: AppTypo.titleLg,
                             fontWeight: FontWeight.bold,
                             color: color,
                           ),
@@ -355,16 +358,16 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                           Text(
                             category,
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: AppTypo.titleMd,
                               fontWeight: FontWeight.bold,
                               color: color,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppSpacing.xs),
                           Text(
                             l10n.bmiDescription,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: AppTypo.bodySm,
                               color: Colors.grey[600],
                             ),
                           ),
@@ -373,7 +376,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 _buildBmiScale(bmi),
               ],
             ),
@@ -397,17 +400,17 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         Stack(
           children: [
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('15', style: TextStyle(fontSize: 10)),
-                Text('18.5', style: TextStyle(fontSize: 10)),
-                Text('25', style: TextStyle(fontSize: 10)),
-                Text('30', style: TextStyle(fontSize: 10)),
-                Text('40', style: TextStyle(fontSize: 10)),
+                Text('15', style: TextStyle(fontSize: AppTypo.overline)),
+                Text('18.5', style: TextStyle(fontSize: AppTypo.overline)),
+                Text('25', style: TextStyle(fontSize: AppTypo.overline)),
+                Text('30', style: TextStyle(fontSize: AppTypo.overline)),
+                Text('40', style: TextStyle(fontSize: AppTypo.overline)),
               ],
             ),
             Positioned(
@@ -426,6 +429,13 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
     final percentage = (clampedBmi - 15) / 25;
     final screenWidth = MediaQuery.of(context).size.width - 80;
     return (percentage * screenWidth) - 10;
+  }
+
+  String _getBmiCategoryLabel(double bmi, AppLocalizations l10n) {
+    if (bmi < 18.5) return l10n.bmiUnderweight;
+    if (bmi < 25) return l10n.bmiNormal;
+    if (bmi < 30) return l10n.bmiOverweight;
+    return l10n.bmiObese;
   }
 
   Color _getBmiColor(double bmi) {
@@ -576,14 +586,14 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               l10n.recentRecords,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: AppTypo.titleSm,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -595,35 +605,35 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
               final bmi = settings.calculateBmi(record.weightKg);
 
               return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       l10n.dateFormat(record.date.year, record.date.month, record.date.day),
-                      style: const TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: AppTypo.bodyMd),
                     ),
                     Row(
                       children: [
                         Text(
                           '${weight.toStringAsFixed(1)} $unitLabel',
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: AppTypo.bodyMd,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         if (bmi != null) ...[
                           const SizedBox(width: 12),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                             decoration: BoxDecoration(
                               color: _getBmiColor(bmi).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: AppRadius.mdAll,
                             ),
                             child: Text(
                               'BMI ${bmi.toStringAsFixed(1)}',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: AppTypo.bodySm,
                                 color: _getBmiColor(bmi),
                                 fontWeight: FontWeight.w500,
                               ),

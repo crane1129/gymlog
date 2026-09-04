@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../../shared/theme/app_spacing.dart';
+import '../../../shared/theme/app_typo.dart';
 
 enum TimerMode { stopwatch, timer }
 
@@ -124,7 +126,7 @@ class TimerFloatingButton extends ConsumerWidget {
 
     final Color bgColor;
     if (timerState.isCompleted) {
-      bgColor = AppColors.secondary;
+      bgColor = AppColors.success;
     } else if (timerState.isRunning) {
       bgColor = Theme.of(context).colorScheme.secondary;
     } else {
@@ -141,7 +143,7 @@ class TimerFloatingButton extends ConsumerWidget {
                     ? timerState.remaining
                     : timerState.elapsed,
               ),
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: AppTypo.overline, fontWeight: FontWeight.bold),
             )
           : timerState.isCompleted
               ? const Icon(Icons.check)
@@ -180,7 +182,7 @@ class TimerSheet extends ConsumerWidget {
     final textColor = _getTextColor(timerState, theme);
 
     return Container(
-      padding: EdgeInsets.fromLTRB(24, 12, 24, 16 + bottomPadding),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, 12, AppSpacing.lg, AppSpacing.md + bottomPadding),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -241,7 +243,7 @@ class TimerSheet extends ConsumerWidget {
               valueColor: AlwaysStoppedAnimation(progressColor),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
           if (timerState.mode == TimerMode.timer) ...[
             Wrap(
               spacing: 10,
@@ -259,7 +261,7 @@ class TimerSheet extends ConsumerWidget {
                   showCheckmark: false,
                   shape: const StadiumBorder(),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                   selectedColor:
                       theme.colorScheme.primary.withValues(alpha: 0.15),
                   labelStyle: TextStyle(
@@ -270,7 +272,7 @@ class TimerSheet extends ConsumerWidget {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
           ],
           _buildControlRow(timerState, notifier, theme),
           const SizedBox(height: 8),
@@ -291,7 +293,7 @@ class TimerSheet extends ConsumerWidget {
     if (timerState.isCompleted) {
       playIcon = Icons.replay;
       playAction = notifier.reset;
-      playColor = AppColors.secondary;
+      playColor = AppColors.success;
     } else if (timerState.isRunning) {
       playIcon = Icons.pause;
       playAction = notifier.pause;
@@ -313,7 +315,7 @@ class TimerSheet extends ConsumerWidget {
             minimumSize: const Size(40, 40),
           ),
         ),
-        const SizedBox(width: 24),
+        const SizedBox(width: AppSpacing.lg),
         ElevatedButton(
           onPressed: playAction,
           style: ElevatedButton.styleFrom(
@@ -326,7 +328,7 @@ class TimerSheet extends ConsumerWidget {
           ),
           child: Icon(playIcon, size: 28),
         ),
-        const SizedBox(width: 24),
+        const SizedBox(width: AppSpacing.lg),
         const SizedBox(width: 40, height: 40),
       ],
     );
@@ -346,7 +348,7 @@ class TimerSheet extends ConsumerWidget {
   }
 
   Color _getProgressColor(TimerState state, ThemeData theme) {
-    if (state.isCompleted) return AppColors.secondary;
+    if (state.isCompleted) return AppColors.success;
     if (!state.isRunning && state.elapsed != Duration.zero) {
       return theme.colorScheme.primary.withValues(alpha: 0.5);
     }
@@ -354,7 +356,7 @@ class TimerSheet extends ConsumerWidget {
   }
 
   Color _getTextColor(TimerState state, ThemeData theme) {
-    if (state.isCompleted) return AppColors.secondary;
+    if (state.isCompleted) return AppColors.success;
     if (state.isRunning) return theme.colorScheme.primary;
     if (!state.isRunning && state.elapsed != Duration.zero) {
       return theme.colorScheme.onSurface.withValues(alpha: 0.6);

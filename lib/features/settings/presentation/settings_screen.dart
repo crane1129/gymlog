@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../../shared/theme/app_spacing.dart';
+import '../../../shared/theme/app_typo.dart';
 import '../data/settings_repository.dart';
 import '../data/export_service.dart';
 import '../data/import_service.dart';
@@ -27,6 +30,20 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
+          ListTile(
+            leading: const Icon(Icons.monitor_weight_outlined),
+            title: Text(l10n.body),
+            subtitle: Text(l10n.weightRecord),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/body'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.timer_outlined),
+            title: Text(l10n.timer),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/timer'),
+          ),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.scale),
             title: Text(l10n.weightUnit),
@@ -292,7 +309,7 @@ class SettingsScreen extends ConsumerWidget {
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -304,32 +321,32 @@ class SettingsScreen extends ConsumerWidget {
                   height: 80,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 l10n.appName,
                 style: const TextStyle(
-                  fontSize: 24,
+                  fontSize: AppTypo.titleLg,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 '${l10n.version} ${packageInfo.version}',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AppTypo.bodyMd,
                   color: Colors.grey[600],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 l10n.aboutDescription,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AppTypo.bodyMd,
                   color: Colors.grey[700],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               _buildInfoRow(Icons.person, l10n.developer, 'Haksoo Kim'),
               const SizedBox(height: 12),
               InkWell(
@@ -341,7 +358,7 @@ class SettingsScreen extends ConsumerWidget {
                   isLink: true,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(

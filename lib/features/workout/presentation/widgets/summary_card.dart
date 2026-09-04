@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/theme/app_radius.dart';
+import '../../../../shared/theme/app_spacing.dart';
+import '../../../../shared/theme/app_typo.dart';
+
 class SummaryCard extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -26,10 +30,10 @@ class SummaryCard extends StatelessWidget {
     return Container(
       width: 130,
       height: 150,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.sm + 4),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.lgAll,
         border: Border.all(
           color: isHighlighted ? color : Colors.transparent,
           width: 2,
@@ -48,10 +52,10 @@ class SummaryCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.smAll,
                 ),
                 child: Icon(icon, size: 20, color: color),
               ),
@@ -60,20 +64,20 @@ class SummaryCard extends StatelessWidget {
                 Icon(Icons.check_circle, size: 20, color: color),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             title,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: AppTypo.caption,
               color: theme.textTheme.bodySmall?.color,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Expanded(
             child: Text(
               mainValue,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: AppTypo.bodyLg,
                 fontWeight: FontWeight.bold,
                 color: isHighlighted ? color : null,
               ),
@@ -85,7 +89,7 @@ class SummaryCard extends StatelessWidget {
             Text(
               subValue!,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: AppTypo.caption,
                 color: theme.textTheme.bodySmall?.color,
               ),
               maxLines: 1,

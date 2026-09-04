@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
+import '../../../../shared/theme/app_spacing.dart';
+import '../../../../shared/theme/app_typo.dart';
 import '../../domain/exercise_progress.dart';
 import 'exercise_progress_chart.dart';
 
@@ -23,14 +25,14 @@ class ExerciseProgressCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               progress.exerciseName,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: AppTypo.bodyLg,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -219,27 +221,27 @@ class _StatItem extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: AppTypo.bodySm,
             color: Colors.grey[600],
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         Row(
           children: [
             Text(
               value,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: AppTypo.titleMd,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
             if (changeText != null) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 changeText!,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: AppTypo.bodySm,
                   color: changeColor,
                   fontWeight: FontWeight.w500,
                 ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/default_exercises.dart';
+import '../../../shared/theme/app_spacing.dart';
+import '../../../shared/theme/app_typo.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../exercise/data/exercise_repository.dart';
@@ -284,7 +286,7 @@ class ProgressScreen extends ConsumerWidget {
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -293,11 +295,11 @@ class ProgressScreen extends ConsumerWidget {
                       error: (e, _) => Center(child: Text('${l10n.error}: $e')),
                       data: (stats) => _buildStatsView(context, stats, settings, l10n),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.lg),
                     exerciseProgressAsync.when(
                       loading: () => const Center(
                         child: Padding(
-                          padding: EdgeInsets.all(32),
+                          padding: EdgeInsets.all(AppSpacing.xl),
                           child: CircularProgressIndicator(),
                         ),
                       ),
@@ -328,7 +330,7 @@ class ProgressScreen extends ConsumerWidget {
   ) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
       child: Row(
         children: [
           _buildFilterChip(
@@ -338,7 +340,7 @@ class ProgressScreen extends ConsumerWidget {
             ProgressFilter.thisMonth,
             currentFilter,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           _buildFilterChip(
             context,
             ref,
@@ -346,7 +348,7 @@ class ProgressScreen extends ConsumerWidget {
             ProgressFilter.threeMonths,
             currentFilter,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           _buildFilterChip(
             context,
             ref,
@@ -354,7 +356,7 @@ class ProgressScreen extends ConsumerWidget {
             ProgressFilter.sixMonths,
             currentFilter,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           _buildFilterChip(
             context,
             ref,
@@ -362,7 +364,7 @@ class ProgressScreen extends ConsumerWidget {
             ProgressFilter.twelveMonths,
             currentFilter,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           _buildFilterChip(
             context,
             ref,
@@ -413,14 +415,12 @@ class ProgressScreen extends ConsumerWidget {
               size: 80,
               color: Colors.grey,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             Text(
-              l10n.isKorean
-                  ? '이 기간의 운동 기록이 없습니다'
-                  : 'No workout records for this period',
+              l10n.noWorkoutRecordsForPeriod,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: AppTypo.bodyLg,
                 color: Colors.grey,
               ),
             ),
@@ -435,11 +435,11 @@ class ProgressScreen extends ConsumerWidget {
         Text(
           l10n.totalStats,
           style: const TextStyle(
-            fontSize: 20,
+            fontSize: AppTypo.titleMd,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.md),
         Row(
           children: [
             Expanded(
@@ -463,7 +463,7 @@ class ProgressScreen extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         _buildStatCard(
           context,
           icon: Icons.monitor_weight,
@@ -486,24 +486,24 @@ class ProgressScreen extends ConsumerWidget {
   }) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           children: [
             Icon(icon, size: 32, color: color),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               value,
               style: TextStyle(
-                fontSize: isWide ? 28 : 24,
+                fontSize: isWide ? AppTypo.displayMd : AppTypo.titleLg,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: AppTypo.bodyMd,
                 color: Colors.grey[600],
               ),
               textAlign: TextAlign.center,
@@ -527,11 +527,11 @@ class ProgressScreen extends ConsumerWidget {
         children: [
           Text(
             l10n.exerciseProgress,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: AppTypo.titleMd, fontWeight: FontWeight.bold),
           ),
           Center(
             child: Padding(
-              padding: const EdgeInsets.all(32),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Text(
                 l10n.noExerciseData,
                 style: const TextStyle(color: Colors.grey),
@@ -555,9 +555,9 @@ class ProgressScreen extends ConsumerWidget {
       children: [
         Text(
           l10n.exerciseProgress,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: AppTypo.titleMd, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         DropdownMenu<String>(
           initialSelection: selected.exerciseId,
           expandedInsets: EdgeInsets.zero,
@@ -575,7 +575,7 @@ class ProgressScreen extends ConsumerWidget {
                   ))
               .toList(),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         ExerciseProgressCard(
           progress: selected,
           useLbs: useLbs,

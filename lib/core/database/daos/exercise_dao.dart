@@ -29,6 +29,8 @@ class ExerciseDao extends DatabaseAccessor<AppDatabase>
         category: exercise.category.value,
         muscleGroup: exercise.muscleGroup.value,
         exerciseType: exercise.exerciseType.present ? exercise.exerciseType.value : 'strength',
+        imagePath: exercise.imagePath.present ? exercise.imagePath.value : null,
+        isFavorite: exercise.isFavorite.present ? exercise.isFavorite.value : false,
         isDefault: exercise.isDefault.value,
         isActive: exercise.isActive.value,
         createdAt: exercise.createdAt.value,

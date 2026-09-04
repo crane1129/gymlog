@@ -106,6 +106,42 @@ class ExerciseRepository {
     );
   }
 
+  Future<void> toggleFavorite(String id) async {
+    final exercise = await getExerciseById(id);
+    if (exercise == null) return;
+    await (_db.update(_db.exercises)..where((e) => e.id.equals(id))).write(
+      ExercisesCompanion(
+        isFavorite: Value(!exercise.isFavorite),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Stream<List<Exercise>> watchFavoriteExercises() {
+    return (_db.select(_db.exercises)
+          ..where((e) => e.isActive.equals(true) & e.isFavorite.equals(true))
+          ..orderBy([(e) => OrderingTerm.asc(e.name)]))
+        .watch();
+  }
+
+  Future<List<String>> getRecentExerciseIds({int limit = 5}) async {
+    final query = _db.selectOnly(_db.workoutSets, distinct: true)
+      ..addColumns([_db.workoutSets.exerciseId])
+      ..orderBy([OrderingTerm.desc(_db.workoutSets.createdAt)])
+      ..limit(limit * 3);
+
+    final rows = await query.get();
+    final seen = <String>{};
+    final result = <String>[];
+    for (final row in rows) {
+      final id = row.read(_db.workoutSets.exerciseId);
+      if (id != null && seen.add(id) && result.length < limit) {
+        result.add(id);
+      }
+    }
+    return result;
+  }
+
   Future<void> deleteExercise(String id) async {
     await (_db.update(_db.exercises)..where((e) => e.id.equals(id))).write(
       ExercisesCompanion(

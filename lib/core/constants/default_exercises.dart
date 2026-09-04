@@ -1,3 +1,4 @@
+import 'exercise_category.dart';
 import 'exercise_type.dart';
 
 class DefaultExercise {
@@ -229,16 +230,12 @@ class ExerciseCategories {
     'Other',
   ];
 
-  static List<String> get(bool isKorean) => isKorean ? ko : en;
+  static List<String> get(bool isKorean) =>
+      ExerciseCategory.labels(isKorean);
 
   static String translate(String category, bool toKorean) {
-    final fromList = toKorean ? en : ko;
-    final toList = toKorean ? ko : en;
-    final index = fromList.indexOf(category);
-    if (index >= 0 && index < toList.length) {
-      return toList[index];
-    }
-    return category;
+    final cat = ExerciseCategory.fromString(category);
+    return cat.label(toKorean);
   }
 }
 

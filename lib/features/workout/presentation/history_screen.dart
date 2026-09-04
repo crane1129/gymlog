@@ -6,6 +6,9 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/default_exercises.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/l10n/app_localizations.dart';
+import '../../../shared/theme/app_radius.dart';
+import '../../../shared/theme/app_spacing.dart';
+import '../../../shared/theme/app_typo.dart';
 import '../data/workout_repository.dart';
 import '../../exercise/data/exercise_repository.dart';
 import '../../settings/data/settings_repository.dart';
@@ -163,9 +166,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           children: [
             Text(
               l10n.dateFormat(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: AppTypo.titleSm, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               l10n.noWorkoutRecord,
               style: const TextStyle(color: Colors.grey),
@@ -242,13 +245,13 @@ class _SessionDetailView extends ConsumerWidget {
             }
 
             return ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.md),
               children: [
                 Text(
                   l10n.dateFormat(selectedDay.year, selectedDay.month, selectedDay.day),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: AppTypo.titleSm, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 ...groupedSets.entries.map((entry) {
                   final exercise = exercises[entry.key];
                   final exerciseSets = entry.value;
@@ -271,7 +274,7 @@ class _SessionDetailView extends ConsumerWidget {
                         exerciseSets,
                         exercise,
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.mdAll,
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
@@ -283,7 +286,7 @@ class _SessionDetailView extends ConsumerWidget {
                                   child: Text(
                                     exerciseName,
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: AppTypo.bodyLg,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -295,7 +298,7 @@ class _SessionDetailView extends ConsumerWidget {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: AppSpacing.sm),
                             ...exerciseSets.asMap().entries.map((e) {
                               final idx = e.key;
                               final set = e.value;
@@ -315,7 +318,7 @@ class _SessionDetailView extends ConsumerWidget {
                                   padding: const EdgeInsets.symmetric(vertical: 2),
                                   child: Text(
                                     '${l10n.set} ${idx + 1}: ${durationMin}min • $displayDistance$distanceUnit',
-                                    style: const TextStyle(fontSize: 14),
+                                    style: const TextStyle(fontSize: AppTypo.bodyMd),
                                   ),
                                 );
                               }
@@ -327,7 +330,7 @@ class _SessionDetailView extends ConsumerWidget {
                                 padding: const EdgeInsets.symmetric(vertical: 2),
                                 child: Text(
                                   '${l10n.set} ${idx + 1}: $displayWeight$unitLabel × ${set.reps ?? 0} ${l10n.reps}',
-                                  style: const TextStyle(fontSize: 14),
+                                  style: const TextStyle(fontSize: AppTypo.bodyMd),
                                 ),
                               );
                             }),

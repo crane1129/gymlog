@@ -46,21 +46,15 @@ final appRouter = GoRouter(
           ),
         ),
         GoRoute(
-          path: '/timer',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: TimerScreen(),
-          ),
-        ),
-        GoRoute(
           path: '/progress',
           pageBuilder: (context, state) => const NoTransitionPage(
             child: ProgressScreen(),
           ),
         ),
         GoRoute(
-          path: '/body',
+          path: '/settings',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: BodyScreen(),
+            child: SettingsScreen(),
           ),
         ),
       ],
@@ -74,9 +68,14 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/settings',
+      path: '/timer',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const SettingsScreen(),
+      builder: (context, state) => const TimerScreen(),
+    ),
+    GoRoute(
+      path: '/body',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const BodyScreen(),
     ),
   ],
 );

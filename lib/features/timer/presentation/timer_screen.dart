@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../../shared/theme/app_spacing.dart';
 import 'timer_overlay.dart';
 
 class TimerScreen extends ConsumerWidget {
@@ -24,7 +25,7 @@ class TimerScreen extends ConsumerWidget {
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -48,7 +49,7 @@ class TimerScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 40),
                 _buildCircularTimer(timerState, theme, l10n),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.xl),
                 if (timerState.mode == TimerMode.timer) ...[
                   _buildPresetChips(timerState, notifier, theme),
                   const SizedBox(height: 28),
@@ -182,7 +183,7 @@ class TimerScreen extends ConsumerWidget {
     if (timerState.isCompleted) {
       playIcon = Icons.replay;
       playAction = notifier.reset;
-      playColor = AppColors.secondary;
+      playColor = AppColors.success;
     } else if (timerState.isRunning) {
       playIcon = Icons.pause;
       playAction = notifier.pause;
@@ -237,7 +238,7 @@ class TimerScreen extends ConsumerWidget {
   }
 
   Color _getProgressColor(TimerState state, ThemeData theme) {
-    if (state.isCompleted) return AppColors.secondary;
+    if (state.isCompleted) return AppColors.success;
     if (!state.isRunning && state.elapsed != Duration.zero) {
       return theme.colorScheme.primary.withValues(alpha: 0.5);
     }
@@ -245,7 +246,7 @@ class TimerScreen extends ConsumerWidget {
   }
 
   Color _getTextColor(TimerState state, ThemeData theme) {
-    if (state.isCompleted) return AppColors.secondary;
+    if (state.isCompleted) return AppColors.success;
     if (state.isRunning) return theme.colorScheme.primary;
     if (!state.isRunning && state.elapsed != Duration.zero) {
       return theme.colorScheme.onSurface.withValues(alpha: 0.6);

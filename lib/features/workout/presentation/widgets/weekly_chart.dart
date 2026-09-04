@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
+import '../../../../shared/theme/app_spacing.dart';
+import '../../../../shared/theme/app_typo.dart';
 import '../../domain/dashboard_stats.dart';
 
 class WeeklyBarChart extends StatelessWidget {
@@ -41,11 +43,11 @@ class WeeklyBarChart extends StatelessWidget {
         Text(
           l10n.weeklyActivity,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: AppTypo.bodyLg,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.md),
         SizedBox(
           height: 180,
           child: BarChart(
@@ -57,8 +59,8 @@ class WeeklyBarChart extends StatelessWidget {
                 enabled: true,
                 touchTooltipData: BarTouchTooltipData(
                   getTooltipColor: (_) => theme.colorScheme.surface,
-                  tooltipPadding: const EdgeInsets.all(8),
-                  tooltipMargin: 8,
+                  tooltipPadding: const EdgeInsets.all(AppSpacing.sm),
+                  tooltipMargin: AppSpacing.sm,
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final dayData = data[group.x.toInt()];
                     final volume = useLbs
@@ -70,7 +72,7 @@ class WeeklyBarChart extends StatelessWidget {
                       TextStyle(
                         color: theme.textTheme.bodyMedium?.color,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: AppTypo.bodySm,
                       ),
                     );
                   },
@@ -86,14 +88,14 @@ class WeeklyBarChart extends StatelessWidget {
                       if (index >= 0 && index < data.length) {
                         final date = data[index].date;
                         return Padding(
-                          padding: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 l10n.dayAbbr(date.weekday),
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: AppTypo.caption,
                                   color: theme.textTheme.bodySmall?.color,
                                 ),
                               ),

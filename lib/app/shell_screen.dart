@@ -39,9 +39,8 @@ class _ShellScreenState extends State<ShellScreen> {
     final location = GoRouterState.of(context).uri.path;
     if (location == '/') return 0;
     if (location.startsWith('/history')) return 1;
-    if (location.startsWith('/timer')) return 2;
-    if (location.startsWith('/progress')) return 3;
-    if (location.startsWith('/body')) return 4;
+    if (location.startsWith('/progress')) return 2;
+    if (location.startsWith('/settings')) return 3;
     return 0;
   }
 
@@ -54,13 +53,10 @@ class _ShellScreenState extends State<ShellScreen> {
         context.go('/history');
         break;
       case 2:
-        context.go('/timer');
-        break;
-      case 3:
         context.go('/progress');
         break;
-      case 4:
-        context.go('/body');
+      case 3:
+        context.go('/settings');
         break;
     }
   }
@@ -86,24 +82,24 @@ class _ShellScreenState extends State<ShellScreen> {
           onTap: (index) => _onItemTapped(context, index),
           items: [
             BottomNavigationBarItem(
-              icon: const Icon(Icons.home),
+              icon: const Icon(Icons.home_outlined),
+              activeIcon: const Icon(Icons.home),
               label: l10n.navHome,
             ),
             BottomNavigationBarItem(
-              icon: const Icon(Icons.calendar_month),
+              icon: const Icon(Icons.calendar_month_outlined),
+              activeIcon: const Icon(Icons.calendar_month),
               label: l10n.navHistory,
             ),
             BottomNavigationBarItem(
-              icon: const Icon(Icons.timer),
-              label: l10n.navTimer,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.bar_chart),
+              icon: const Icon(Icons.bar_chart_outlined),
+              activeIcon: const Icon(Icons.bar_chart),
               label: l10n.navProgress,
             ),
             BottomNavigationBarItem(
-              icon: const Icon(Icons.person),
-              label: l10n.navBody,
+              icon: const Icon(Icons.settings_outlined),
+              activeIcon: const Icon(Icons.settings),
+              label: l10n.navSettings,
             ),
           ],
         ),
