@@ -92,9 +92,19 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           Expanded(
             child: _selectedDay == null
                 ? Center(
-                    child: Text(
-                      l10n.selectDate,
-                      style: const TextStyle(color: Colors.grey),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.calendar_month_outlined, size: 48,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          l10n.selectDate,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   )
                 : sessionsAsync.when(
@@ -116,9 +126,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       calendarFormat: _calendarFormat,
       selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
       eventLoader: (day) {
-        return sessions
-            .where((s) => isSameDay(s.date, day) && sessionsWithSets.contains(s.id))
-            .toList();
+        final hasWorkout = sessions
+            .any((s) => isSameDay(s.date, day) && sessionsWithSets.contains(s.id));
+        return hasWorkout ? [true] : [];
       },
       onDaySelected: (selectedDay, focusedDay) {
         setState(() {
@@ -164,14 +174,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(Icons.event_busy_outlined, size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: AppSpacing.md),
             Text(
               l10n.dateFormat(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day),
               style: const TextStyle(fontSize: AppTypo.titleSm, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               l10n.noWorkoutRecord,
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -185,7 +198,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }
 }
 
-class _SessionDetailView extends ConsumerWidget {
+class _SessionDetailView extends ConsumerStatefulWidget {
   final List<WorkoutSession> sessions;
   final DateTime selectedDay;
 
@@ -193,6 +206,59 @@ class _SessionDetailView extends ConsumerWidget {
     required this.sessions,
     required this.selectedDay,
   });
+
+  @override
+  ConsumerState<_SessionDetailView> createState() => _SessionDetailViewState();
+}
+
+class _SessionDetailViewState extends ConsumerState<_SessionDetailView> {
+  List<WorkoutSet>? _allSets;
+  Map<String, Exercise>? _exercises;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SessionDetailView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sessions != widget.sessions ||
+        oldWidget.selectedDay != widget.selectedDay) {
+      _loadData();
+    }
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    final workoutRepo = ref.read(workoutRepositoryProvider);
+    final exerciseRepo = ref.read(exerciseRepositoryProvider);
+
+    final allSets = <WorkoutSet>[];
+    for (final session in widget.sessions) {
+      final sets = await workoutRepo.getSetsBySession(session.id);
+      allSets.addAll(sets);
+    }
+
+    final exerciseIds = allSets.map((s) => s.exerciseId).toSet().toList();
+    final exercises = <String, Exercise>{};
+    for (final id in exerciseIds) {
+      final exercise = await exerciseRepo.getExerciseById(id);
+      if (exercise != null) {
+        exercises[id] = exercise;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _allSets = allSets;
+        _exercises = exercises;
+        _isLoading = false;
+      });
+    }
+  }
 
   String _getExerciseName(Exercise? exercise, bool isKorean) {
     if (exercise == null) return '';
@@ -205,175 +271,128 @@ class _SessionDetailView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isKorean = l10n.isKorean;
-    final exerciseRepo = ref.watch(exerciseRepositoryProvider);
-    final workoutRepo = ref.watch(workoutRepositoryProvider);
     final settings = ref.watch(settingsProvider);
     final unitLabel = settings.weightUnit == WeightUnit.kg ? 'kg' : 'lbs';
 
-    return FutureBuilder<List<WorkoutSet>>(
-      future: _loadAllSets(workoutRepo),
-      builder: (context, setsSnapshot) {
-        if (!setsSnapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        final allSets = setsSnapshot.data!;
+    final allSets = _allSets;
+    if (allSets == null || allSets.isEmpty) {
+      return Center(
+        child: Text(l10n.noSetRecord, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      );
+    }
 
-        if (allSets.isEmpty) {
-          return Center(
-            child: Text(l10n.noSetRecord, style: const TextStyle(color: Colors.grey)),
-          );
-        }
+    final exercises = _exercises ?? {};
+    final groupedSets = <String, List<WorkoutSet>>{};
+    for (final set in allSets) {
+      groupedSets.putIfAbsent(set.exerciseId, () => []).add(set);
+    }
 
-        final exerciseIds = allSets.map((s) => s.exerciseId).toSet().toList();
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Text(
+          l10n.dateFormat(widget.selectedDay.year, widget.selectedDay.month, widget.selectedDay.day),
+          style: const TextStyle(fontSize: AppTypo.titleSm, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        ...groupedSets.entries.map((entry) {
+          final exercise = exercises[entry.key];
+          final exerciseSets = entry.value;
+          final exerciseName = exercise != null
+              ? _getExerciseName(exercise, isKorean)
+              : l10n.unknownExercise;
+          final sessionId = exerciseSets.first.sessionId;
+          final exerciseId = entry.key;
 
-        return FutureBuilder<Map<String, Exercise>>(
-          future: _loadExercises(exerciseRepo, exerciseIds),
-          builder: (context, exerciseSnapshot) {
-            if (!exerciseSnapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final exercises = exerciseSnapshot.data!;
-            final groupedSets = <String, List<WorkoutSet>>{};
-
-            for (final set in allSets) {
-              groupedSets.putIfAbsent(set.exerciseId, () => []).add(set);
-            }
-
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              children: [
-                Text(
-                  l10n.dateFormat(selectedDay.year, selectedDay.month, selectedDay.day),
-                  style: const TextStyle(fontSize: AppTypo.titleSm, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ...groupedSets.entries.map((entry) {
-                  final exercise = exercises[entry.key];
-                  final exerciseSets = entry.value;
-                  final exerciseName = exercise != null
-                      ? _getExerciseName(exercise, isKorean)
-                      : l10n.unknownExercise;
-                  final sessionId = exerciseSets.first.sessionId;
-                  final exerciseId = entry.key;
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: InkWell(
-                      onTap: () => _showActionSheet(
-                        context,
-                        ref,
-                        l10n,
-                        sessionId,
-                        exerciseId,
-                        exerciseName,
-                        exerciseSets,
-                        exercise,
-                      ),
-                      borderRadius: AppRadius.mdAll,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    exerciseName,
-                                    style: const TextStyle(
-                                      fontSize: AppTypo.bodyLg,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.more_vert,
-                                  size: 20,
-                                  color: Colors.grey[400],
-                                ),
-                              ],
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap: () => _showActionSheet(
+                l10n,
+                sessionId,
+                exerciseId,
+                exerciseName,
+                exerciseSets,
+                exercise,
+              ),
+              borderRadius: AppRadius.mdAll,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            exerciseName,
+                            style: const TextStyle(
+                              fontSize: AppTypo.bodyLg,
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(height: AppSpacing.sm),
-                            ...exerciseSets.asMap().entries.map((e) {
-                              final idx = e.key;
-                              final set = e.value;
-                              final isCardio = set.durationSeconds != null || set.distanceKm != null;
-
-                              if (isCardio) {
-                                final durationMin = set.durationSeconds != null
-                                    ? (set.durationSeconds! / 60).toStringAsFixed(0)
-                                    : '-';
-                                final distanceUnit = settings.weightUnit == WeightUnit.lbs ? 'mi' : 'km';
-                                final displayDistance = set.distanceKm != null
-                                    ? (settings.weightUnit == WeightUnit.lbs
-                                        ? (set.distanceKm! * 0.621371).toStringAsFixed(2)
-                                        : set.distanceKm!.toStringAsFixed(2))
-                                    : '-';
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 2),
-                                  child: Text(
-                                    '${l10n.set} ${idx + 1}: ${durationMin}min • $displayDistance$distanceUnit',
-                                    style: const TextStyle(fontSize: AppTypo.bodyMd),
-                                  ),
-                                );
-                              }
-
-                              final displayWeight = settings.weightUnit == WeightUnit.lbs
-                                  ? ((set.weightKg ?? 0) * 2.20462).toStringAsFixed(1)
-                                  : (set.weightKg ?? 0).toStringAsFixed(1);
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2),
-                                child: Text(
-                                  '${l10n.set} ${idx + 1}: $displayWeight$unitLabel × ${set.reps ?? 0} ${l10n.reps}',
-                                  style: const TextStyle(fontSize: AppTypo.bodyMd),
-                                ),
-                              );
-                            }),
-                          ],
+                          ),
                         ),
-                      ),
+                        Icon(
+                          Icons.more_vert,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ],
                     ),
-                  );
-                }),
-              ],
-            );
-          },
-        );
-      },
+                    const SizedBox(height: AppSpacing.sm),
+                    ...exerciseSets.asMap().entries.map((e) {
+                      final idx = e.key;
+                      final set = e.value;
+                      final isCardio = set.durationSeconds != null || set.distanceKm != null;
+
+                      if (isCardio) {
+                        final durationMin = set.durationSeconds != null
+                            ? (set.durationSeconds! / 60).toStringAsFixed(0)
+                            : '-';
+                        final distanceUnit = settings.weightUnit == WeightUnit.lbs ? 'mi' : 'km';
+                        final displayDistance = set.distanceKm != null
+                            ? (settings.weightUnit == WeightUnit.lbs
+                                ? (set.distanceKm! * 0.621371).toStringAsFixed(2)
+                                : set.distanceKm!.toStringAsFixed(2))
+                            : '-';
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            '${l10n.set} ${idx + 1}: ${durationMin}min • $displayDistance$distanceUnit',
+                            style: const TextStyle(fontSize: AppTypo.bodyMd),
+                          ),
+                        );
+                      }
+
+                      final displayWeight = settings.weightUnit == WeightUnit.lbs
+                          ? ((set.weightKg ?? 0) * 2.20462).toStringAsFixed(1)
+                          : (set.weightKg ?? 0).toStringAsFixed(1);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '${l10n.set} ${idx + 1}: $displayWeight$unitLabel × ${set.reps ?? 0} ${l10n.reps}',
+                          style: const TextStyle(fontSize: AppTypo.bodyMd),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 
-  Future<List<WorkoutSet>> _loadAllSets(WorkoutRepository repo) async {
-    final allSets = <WorkoutSet>[];
-    for (final session in sessions) {
-      final sets = await repo.getSetsBySession(session.id);
-      allSets.addAll(sets);
-    }
-    return allSets;
-  }
-
-  Future<Map<String, Exercise>> _loadExercises(
-    ExerciseRepository repo,
-    List<String> ids,
-  ) async {
-    final map = <String, Exercise>{};
-    for (final id in ids) {
-      final exercise = await repo.getExerciseById(id);
-      if (exercise != null) {
-        map[id] = exercise;
-      }
-    }
-    return map;
-  }
-
   void _showActionSheet(
-    BuildContext context,
-    WidgetRef ref,
     AppLocalizations l10n,
     String sessionId,
     String exerciseId,
@@ -407,6 +426,7 @@ class _SessionDetailView extends ConsumerWidget {
                 if (result == true) {
                   ref.invalidate(sessionsProvider);
                   ref.invalidate(sessionsWithSetsProvider);
+                  _loadData();
                 }
               },
             ),
@@ -415,7 +435,7 @@ class _SessionDetailView extends ConsumerWidget {
               title: Text(l10n.deleteRecord, style: const TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(sheetContext);
-                _showDeleteDialog(context, ref, l10n, sessionId, exerciseId, exerciseName);
+                _showDeleteDialog(l10n, sessionId, exerciseId, exerciseName);
               },
             ),
             ListTile(
@@ -430,8 +450,6 @@ class _SessionDetailView extends ConsumerWidget {
   }
 
   void _showDeleteDialog(
-    BuildContext context,
-    WidgetRef ref,
     AppLocalizations l10n,
     String sessionId,
     String exerciseId,
@@ -454,6 +472,7 @@ class _SessionDetailView extends ConsumerWidget {
               await repo.deleteSetsByExercise(sessionId, exerciseId);
               ref.invalidate(sessionsProvider);
               ref.invalidate(sessionsWithSetsProvider);
+              _loadData();
             },
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,

@@ -23,9 +23,9 @@ final favoriteExercisesProvider = StreamProvider<List<Exercise>>((ref) {
   return repo.watchFavoriteExercises();
 });
 
-final recentExerciseIdsProvider = FutureProvider<List<String>>((ref) {
+final recentExerciseIdsProvider = StreamProvider<List<String>>((ref) {
   final repo = ref.watch(exerciseRepositoryProvider);
-  return repo.getRecentExerciseIds(limit: 10);
+  return repo.watchRecentExerciseIds(limit: 10);
 });
 
 class ExercisePickerScreen extends ConsumerStatefulWidget {
@@ -142,6 +142,9 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen>
         title: Text(l10n.selectExercise),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: AppColors.primary,
           tabs: [
             Tab(text: l10n.recentExercises),
             Tab(text: l10n.favoriteExercises),
@@ -183,6 +186,12 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen>
                 .map((id) => exerciseMap[id])
                 .whereType<Exercise>()
                 .toList();
+            if (recentExercises.isEmpty) {
+              return _buildEmptyState(
+                icon: Icons.history,
+                message: l10n.noRecentExercises,
+              );
+            }
             return _buildExerciseList(recentExercises, isKorean, l10n, theme);
           },
         );
@@ -419,8 +428,15 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen>
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
       child: FilterChip(
-        label: Text(label),
+        label: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         selected: isSelected,
+        selectedColor: chipColor ?? AppColors.primary,
+        checkmarkColor: Colors.white,
         avatar: chipColor != null && !isSelected
             ? Container(
                 width: 8,
@@ -449,13 +465,13 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 56, color: Colors.grey[400]),
+          Icon(icon, size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
           const SizedBox(height: AppSpacing.md),
           Text(
             message,
             style: TextStyle(
               fontSize: AppTypo.bodyLg,
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           if (hint != null) ...[
@@ -464,7 +480,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen>
               hint,
               style: TextStyle(
                 fontSize: AppTypo.bodySm,
-                color: Colors.grey[400],
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
               ),
             ),
           ],

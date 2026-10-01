@@ -374,10 +374,19 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _checkForUpdates(BuildContext context, AppLocalizations l10n) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+            const SizedBox(width: 12),
+            Text(l10n.checkingForUpdates),
+          ],
+        ),
+        duration: const Duration(seconds: 15),
+      ),
     );
 
     Upgrader? upgrader;
@@ -389,10 +398,10 @@ class SettingsScreen extends ConsumerWidget {
         ),
       );
 
-      await upgrader.initialize();
+      await upgrader.initialize().timeout(const Duration(seconds: 10));
+      scaffoldMessenger.hideCurrentSnackBar();
 
       if (!context.mounted) return;
-      Navigator.of(context).pop();
 
       final isAvailable = upgrader.isUpdateAvailable();
       final installedVersion = upgrader.currentInstalledVersion ?? '';
@@ -402,7 +411,6 @@ class SettingsScreen extends ConsumerWidget {
         final localUpgrader = upgrader;
         upgrader = null;
 
-        if (!context.mounted) return;
         showDialog(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -428,7 +436,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
         );
       } else {
-        if (!context.mounted) return;
         showDialog(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -444,22 +451,21 @@ class SettingsScreen extends ConsumerWidget {
         );
       }
     } catch (e) {
-      if (context.mounted) Navigator.of(context).pop();
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: Text(l10n.error),
-            content: Text(l10n.updateCheckFailed),
-            actions: [
-              FilledButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text(l10n.confirm),
-              ),
-            ],
-          ),
-        );
-      }
+      scaffoldMessenger.hideCurrentSnackBar();
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.error),
+          content: Text(l10n.updateCheckFailed),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.confirm),
+            ),
+          ],
+        ),
+      );
     } finally {
       upgrader?.dispose();
     }

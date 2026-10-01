@@ -32,6 +32,7 @@ enum ExerciseDataType {
 class ExerciseProgress {
   final String exerciseId;
   final String exerciseName;
+  final String exerciseCategory;
   final ExerciseDataType dataType;
   final List<ExerciseProgressPoint> points;
   final double? currentMaxWeight;
@@ -46,6 +47,7 @@ class ExerciseProgress {
   const ExerciseProgress({
     required this.exerciseId,
     required this.exerciseName,
+    this.exerciseCategory = 'other',
     required this.dataType,
     required this.points,
     this.currentMaxWeight,

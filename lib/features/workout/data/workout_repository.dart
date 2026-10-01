@@ -129,15 +129,17 @@ class WorkoutRepository {
         .watch();
   }
 
-  Future<WorkoutSession?> getSessionByDate(DateTime date) {
+  Future<WorkoutSession?> getSessionByDate(DateTime date) async {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    return (_db.select(_db.workoutSessions)
+    final results = await (_db.select(_db.workoutSessions)
           ..where((s) =>
               s.date.isBiggerOrEqualValue(startOfDay) &
-              s.date.isSmallerThanValue(endOfDay)))
-        .getSingleOrNull();
+              s.date.isSmallerThanValue(endOfDay))
+          ..limit(1))
+        .get();
+    return results.isEmpty ? null : results.first;
   }
 
   Future<List<WorkoutSet>> getSetsBySession(String sessionId) {
@@ -245,5 +247,29 @@ class WorkoutRepository {
   Future<List<String>> getExerciseIdsWithData(DateTime start, DateTime end) async {
     final setsByExercise = await getSetsByExercisesAndDateRange(start, end);
     return setsByExercise.keys.toList();
+  }
+
+  Future<({List<WorkoutSet> sets, DateTime date})?> getLastSessionSetsForExercise(
+    String exerciseId, {
+    DateTime? beforeDate,
+  }) async {
+    final cutoff = beforeDate ?? DateTime.now();
+    final sessions = await (_db.select(_db.workoutSessions)
+          ..where((s) => s.date.isSmallerThanValue(cutoff))
+          ..orderBy([(s) => OrderingTerm.desc(s.date)]))
+        .get();
+
+    for (final session in sessions) {
+      final sets = await (_db.select(_db.workoutSets)
+            ..where((s) =>
+                s.sessionId.equals(session.id) &
+                s.exerciseId.equals(exerciseId))
+            ..orderBy([(s) => OrderingTerm.asc(s.setNumber)]))
+          .get();
+      if (sets.isNotEmpty) {
+        return (sets: sets, date: session.date);
+      }
+    }
+    return null;
   }
 }

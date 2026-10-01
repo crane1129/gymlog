@@ -440,8 +440,14 @@ class _ManageExercisesScreenState extends ConsumerState<ManageExercisesScreen> {
     AppLocalizations l10n,
     Exercise exercise,
   ) {
-    final nameController = TextEditingController(text: exercise.name);
-    final muscleGroupController = TextEditingController(text: exercise.muscleGroup ?? '');
+    final displayName = DefaultExerciseHelper.getDisplayName(
+      exercise.id, exercise.name, l10n.isKorean,
+    );
+    final displayMuscleGroup = DefaultExerciseHelper.getDisplayMuscleGroup(
+      exercise.id, exercise.muscleGroup, l10n.isKorean,
+    );
+    final nameController = TextEditingController(text: displayName);
+    final muscleGroupController = TextEditingController(text: displayMuscleGroup ?? '');
     final categories = l10n.isKorean ? ExerciseCategories.ko : ExerciseCategories.en;
     String selectedCategory = categories.contains(exercise.category)
         ? exercise.category

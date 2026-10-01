@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/l10n/app_localizations.dart';
+import '../../../shared/theme/app_colors.dart';
 import '../../../shared/theme/app_radius.dart';
 import '../../../shared/theme/app_spacing.dart';
 import '../../../shared/theme/app_typo.dart';
@@ -23,452 +24,284 @@ class BodyScreen extends ConsumerStatefulWidget {
 }
 
 class _BodyScreenState extends ConsumerState<BodyScreen> {
-  final _weightController = TextEditingController();
-  final _heightController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
-  bool _isSaving = false;
-
-  @override
-  void dispose() {
-    _weightController.dispose();
-    _heightController.dispose();
-    super.dispose();
-  }
-
-  void _selectDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
-  Future<void> _saveRecord() async {
-    final l10n = AppLocalizations.of(context);
-    final settings = ref.read(settingsProvider);
-
-    if (_weightController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.enterWeight)),
-      );
-      return;
-    }
-
-    final weight = double.tryParse(_weightController.text);
-    if (weight == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.enterWeight)),
-      );
-      return;
-    }
-
-    FocusScope.of(context).unfocus();
-
-    if (settings.heightCm == null && _heightController.text.isNotEmpty) {
-      final height = double.tryParse(_heightController.text);
-      if (height != null && height > 0) {
-        final heightCm = settings.heightToCm(height);
-        await ref.read(settingsProvider.notifier).setHeightCm(heightCm);
-      }
-    }
-
-    setState(() => _isSaving = true);
-
-    try {
-      final repo = ref.read(bodyRepositoryProvider);
-      final currentSettings = ref.read(settingsProvider);
-
-      final weightKg = currentSettings.weightUnit == WeightUnit.lbs
-          ? weight * 0.453592
-          : weight;
-
-      await repo.addOrUpdateRecord(
-        date: _selectedDate,
-        weightKg: weightKg,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.weightSaved)),
-        );
-        _weightController.clear();
-        setState(() {
-          _selectedDate = DateTime.now();
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.error}: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-    }
-  }
-
-  void _showHeightDialog() {
-    final l10n = AppLocalizations.of(context);
-    final settings = ref.read(settingsProvider);
-    final controller = TextEditingController();
-
-    if (settings.heightCm != null) {
-      controller.text = settings.displayHeight.toStringAsFixed(1);
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.height),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: l10n.heightLabel(settings.heightUnitLabel),
-                prefixIcon: const Icon(Icons.height),
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              final height = double.tryParse(controller.text);
-              if (height != null && height > 0) {
-                final heightCm = settings.heightToCm(height);
-                ref.read(settingsProvider.notifier).setHeightCm(heightCm);
-              }
-              Navigator.pop(context);
-            },
-            child: Text(l10n.save),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final settings = ref.watch(settingsProvider);
-    final unitLabel = settings.weightUnitLabel;
-    final heightUnitLabel = settings.heightUnitLabel;
     final recordsAsync = ref.watch(bodyRecordsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.body),
+        actions: [
+          if (settings.heightCm != null)
+            TextButton.icon(
+              onPressed: _showHeightDialog,
+              icon: const Icon(Icons.height, size: 18, color: Colors.white70),
+              label: Text(
+                '${settings.displayHeight.toStringAsFixed(settings.useMetric ? 0 : 1)} ${settings.heightUnitLabel}',
+                style: const TextStyle(fontSize: AppTypo.bodySm, color: Colors.white70),
+              ),
+            ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddWeightSheet(context),
+        icon: const Icon(Icons.add_rounded),
+        label: Text(l10n.addWeight),
+      ),
+      body: recordsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('${l10n.error}: $e')),
+        data: (records) => _buildBody(context, records, settings, l10n),
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    List<BodyRecord> records,
+    AppSettings settings,
+    AppLocalizations l10n,
+  ) {
+    if (records.isEmpty) {
+      return Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (settings.heightCm != null)
-              _buildBmiCard(settings, recordsAsync, l10n),
-            if (settings.heightCm != null) const SizedBox(height: AppSpacing.md),
-            Card(
+            Icon(Icons.monitor_weight_outlined, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.graphPlaceholder,
+              style: TextStyle(fontSize: AppTypo.bodyLg, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(bodyRecordsProvider),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        children: [
+          if (settings.heightCm != null) ...[
+            _buildCompactBmi(records.first, settings, l10n),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          _buildWeightSummary(records, settings, l10n),
+          const SizedBox(height: AppSpacing.md),
+          _buildChart(records, settings, l10n),
+          const SizedBox(height: AppSpacing.md),
+          _buildRecordsList(records, settings, l10n),
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactBmi(BodyRecord latest, AppSettings settings, AppLocalizations l10n) {
+    final bmi = settings.calculateBmi(latest.weightKg);
+    if (bmi == null) return const SizedBox.shrink();
+
+    final color = _getBmiColor(bmi);
+    final category = _getBmiCategoryLabel(bmi, l10n);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withValues(alpha: 0.15),
+                border: Border.all(color: color, width: 2.5),
+              ),
+              child: Center(
+                child: Text(
+                  bmi.toStringAsFixed(1),
+                  style: TextStyle(
+                    fontSize: AppTypo.titleSm,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'BMI',
+                        style: TextStyle(fontSize: AppTypo.bodySm, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          borderRadius: AppRadius.fullAll,
+                        ),
+                        child: Text(
+                          category,
+                          style: TextStyle(
+                            fontSize: AppTypo.caption,
+                            fontWeight: FontWeight.w600,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _buildBmiBar(bmi),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBmiBar(double bmi) {
+    return ClipRRect(
+      borderRadius: AppRadius.fullAll,
+      child: SizedBox(
+        height: 6,
+        child: Stack(
+          children: [
+            Row(
+              children: [
+                Expanded(flex: 35, child: Container(color: Colors.blue)),
+                Expanded(flex: 65, child: Container(color: Colors.green)),
+                Expanded(flex: 50, child: Container(color: Colors.orange)),
+                Expanded(flex: 100, child: Container(color: Colors.red)),
+              ],
+            ),
+            Positioned(
+              left: _bmiBarPosition(bmi),
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: 3,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: AppRadius.fullAll,
+                  boxShadow: const [BoxShadow(blurRadius: 2)],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _bmiBarPosition(double bmi) {
+    final clamped = bmi.clamp(15.0, 40.0);
+    final width = MediaQuery.of(context).size.width - 120;
+    return ((clamped - 15) / 25) * width;
+  }
+
+  Widget _buildWeightSummary(List<BodyRecord> records, AppSettings settings, AppLocalizations l10n) {
+    final latest = records.first;
+    final latestWeight = settings.weightUnit == WeightUnit.lbs
+        ? latest.weightKg * 2.20462
+        : latest.weightKg;
+    final unitLabel = settings.weightUnitLabel;
+
+    double? change;
+    if (records.length >= 2) {
+      final previous = records[1];
+      final prevWeight = settings.weightUnit == WeightUnit.lbs
+          ? previous.weightKg * 2.20462
+          : previous.weightKg;
+      change = latestWeight - prevWeight;
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.currentWeight,
+                    style: TextStyle(fontSize: AppTypo.caption, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    '${latestWeight.toStringAsFixed(1)} $unitLabel',
+                    style: const TextStyle(fontSize: AppTypo.titleLg, fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (change != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Card(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l10n.weightRecord,
-                      style: const TextStyle(
-                        fontSize: AppTypo.titleSm,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      l10n.isKorean ? '변화' : 'Change',
+                      style: TextStyle(fontSize: AppTypo.caption, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    if (settings.heightCm == null) ...[
-                      TextField(
-                        controller: _heightController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(
-                          labelText: l10n.heightLabel(heightUnitLabel),
-                          prefixIcon: const Icon(Icons.height),
-                          helperText: l10n.heightHelperText,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    InkWell(
-                      onTap: _selectDate,
-                      child: InputDecorator(
-                        decoration: InputDecoration(
-                          labelText: l10n.date,
-                          prefixIcon: const Icon(Icons.calendar_today),
-                        ),
-                        child: Text(
-                          l10n.dateFormat(_selectedDate.year, _selectedDate.month, _selectedDate.day),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextField(
-                      controller: _weightController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: l10n.weightLabel(unitLabel),
-                        prefixIcon: const Icon(Icons.monitor_weight),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    FilledButton(
-                      onPressed: _isSaving ? null : _saveRecord,
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(l10n.saveRecord),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                    const SizedBox(height: AppSpacing.xs),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          l10n.weightTrend,
-                          style: const TextStyle(
-                            fontSize: AppTypo.titleSm,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Icon(
+                          change > 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                          size: 20,
+                          color: change > 0 ? Colors.red : AppColors.success,
                         ),
-                        if (settings.heightCm != null)
-                          TextButton.icon(
-                            onPressed: _showHeightDialog,
-                            icon: const Icon(Icons.height, size: 18),
-                            label: Text(
-                              '${settings.displayHeight.toStringAsFixed(settings.useMetric ? 0 : 1)} ${settings.heightUnitLabel}',
-                              style: const TextStyle(fontSize: AppTypo.bodySm),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    recordsAsync.when(
-                      loading: () => const SizedBox(
-                        height: 200,
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                      error: (e, _) => SizedBox(
-                        height: 200,
-                        child: Center(child: Text('${l10n.error}: $e')),
-                      ),
-                      data: (records) => _buildChart(records, settings),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            recordsAsync.when(
-              loading: () => const SizedBox(),
-              error: (_, __) => const SizedBox(),
-              data: (records) => _buildRecordsList(records, settings, l10n),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBmiCard(AppSettings settings, AsyncValue<List<BodyRecord>> recordsAsync, AppLocalizations l10n) {
-    return recordsAsync.when(
-      loading: () => const SizedBox(),
-      error: (_, __) => const SizedBox(),
-      data: (records) {
-        if (records.isEmpty) return const SizedBox();
-
-        final latestRecord = records.first;
-        final bmi = settings.calculateBmi(latestRecord.weightKg);
-        if (bmi == null) return const SizedBox();
-
-        final category = _getBmiCategoryLabel(bmi, l10n);
-        final color = _getBmiColor(bmi);
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.bmiTitle,
-                  style: const TextStyle(
-                    fontSize: AppTypo.titleSm,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: color.withValues(alpha: 0.2),
-                        border: Border.all(color: color, width: 3),
-                      ),
-                      child: Center(
-                        child: Text(
-                          bmi.toStringAsFixed(1),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          '${change > 0 ? '+' : ''}${change.toStringAsFixed(1)} $unitLabel',
                           style: TextStyle(
                             fontSize: AppTypo.titleLg,
-                            fontWeight: FontWeight.bold,
-                            color: color,
+                            fontWeight: FontWeight.w800,
+                            color: change > 0 ? Colors.red : AppColors.success,
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            category,
-                            style: TextStyle(
-                              fontSize: AppTypo.titleMd,
-                              fontWeight: FontWeight.bold,
-                              color: color,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            l10n.bmiDescription,
-                            style: TextStyle(
-                              fontSize: AppTypo.bodySm,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-                _buildBmiScale(bmi),
-              ],
+              ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBmiScale(double bmi) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 8,
-          child: Row(
-            children: [
-              Expanded(flex: 185, child: Container(color: Colors.blue)),
-              Expanded(flex: 65, child: Container(color: Colors.green)),
-              Expanded(flex: 50, child: Container(color: Colors.orange)),
-              Expanded(flex: 100, child: Container(color: Colors.red)),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Stack(
-          children: [
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('15', style: TextStyle(fontSize: AppTypo.overline)),
-                Text('18.5', style: TextStyle(fontSize: AppTypo.overline)),
-                Text('25', style: TextStyle(fontSize: AppTypo.overline)),
-                Text('30', style: TextStyle(fontSize: AppTypo.overline)),
-                Text('40', style: TextStyle(fontSize: AppTypo.overline)),
-              ],
-            ),
-            Positioned(
-              left: _calculateBmiPosition(bmi),
-              top: -12,
-              child: const Icon(Icons.arrow_drop_down, size: 20),
-            ),
-          ],
-        ),
+        ],
       ],
     );
   }
 
-  double _calculateBmiPosition(double bmi) {
-    final clampedBmi = bmi.clamp(15.0, 40.0);
-    final percentage = (clampedBmi - 15) / 25;
-    final screenWidth = MediaQuery.of(context).size.width - 80;
-    return (percentage * screenWidth) - 10;
-  }
-
-  String _getBmiCategoryLabel(double bmi, AppLocalizations l10n) {
-    if (bmi < 18.5) return l10n.bmiUnderweight;
-    if (bmi < 25) return l10n.bmiNormal;
-    if (bmi < 30) return l10n.bmiOverweight;
-    return l10n.bmiObese;
-  }
-
-  Color _getBmiColor(double bmi) {
-    if (bmi < 18.5) return Colors.blue;
-    if (bmi < 25) return Colors.green;
-    if (bmi < 30) return Colors.orange;
-    return Colors.red;
-  }
-
-  Widget _buildChart(List<BodyRecord> records, AppSettings settings) {
-    if (records.isEmpty) {
-      final l10n = AppLocalizations.of(context);
-      return SizedBox(
-        height: 200,
-        child: Center(
-          child: Text(
-            l10n.graphPlaceholder,
-            style: const TextStyle(color: Colors.grey),
-          ),
-        ),
-      );
-    }
-
+  Widget _buildChart(List<BodyRecord> records, AppSettings settings, AppLocalizations l10n) {
     final chartRecords = records.take(30).toList().reversed.toList();
 
     if (chartRecords.length < 2) {
-      final l10n = AppLocalizations.of(context);
-      return SizedBox(
-        height: 200,
-        child: Center(
-          child: Text(
-            l10n.graphPlaceholder,
-            style: const TextStyle(color: Colors.grey),
+      return Card(
+        child: SizedBox(
+          height: 200,
+          child: Center(
+            child: Text(l10n.graphPlaceholder, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
         ),
       );
@@ -488,7 +321,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
       if (weight > maxWeight) maxWeight = weight;
     }
 
-    final padding = (maxWeight - minWeight) * 0.1;
+    final padding = (maxWeight - minWeight) * 0.15;
     if (padding == 0) {
       minWeight -= 1;
       maxWeight += 1;
@@ -497,79 +330,115 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
       maxWeight += padding;
     }
 
-    return SizedBox(
-      height: 200,
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: (maxWeight - minWeight) / 4,
-          ),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 45,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toStringAsFixed(1),
-                    style: const TextStyle(fontSize: 10),
-                  );
-                },
-              ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.sm),
+              child: Text(l10n.weightTrend, style: AppTypo.subtitle),
             ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 30,
-                interval: (chartRecords.length / 4).ceilToDouble(),
-                getTitlesWidget: (value, meta) {
-                  final index = value.toInt();
-                  if (index < 0 || index >= chartRecords.length) {
-                    return const SizedBox();
-                  }
-                  final date = chartRecords[index].date;
-                  return Text(
-                    '${date.month}/${date.day}',
-                    style: const TextStyle(fontSize: 10),
-                  );
-                },
-              ),
-            ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          minX: 0,
-          maxX: (chartRecords.length - 1).toDouble(),
-          minY: minWeight,
-          maxY: maxWeight,
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              curveSmoothness: 0.3,
-              color: Theme.of(context).colorScheme.primary,
-              barWidth: 3,
-              dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barData, index) {
-                  return FlDotCirclePainter(
-                    radius: 4,
-                    color: Theme.of(context).colorScheme.primary,
-                    strokeWidth: 2,
-                    strokeColor: Colors.white,
-                  );
-                },
-              ),
-              belowBarData: BarAreaData(
-                show: true,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: (maxWeight - minWeight) / 4,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                      strokeWidth: 0.5,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) => Text(
+                          value.toStringAsFixed(0),
+                          style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 24,
+                        interval: (chartRecords.length / 4).ceilToDouble(),
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= chartRecords.length) return const SizedBox();
+                          final date = chartRecords[index].date;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              '${date.month}/${date.day}',
+                              style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minX: 0,
+                  maxX: (chartRecords.length - 1).toDouble(),
+                  minY: minWeight,
+                  maxY: maxWeight,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      curveSmoothness: 0.3,
+                      color: AppColors.primary,
+                      barWidth: 2.5,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                          radius: 3.5,
+                          color: AppColors.primary,
+                          strokeWidth: 1.5,
+                          strokeColor: Theme.of(context).colorScheme.surface,
+                        ),
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColors.primary.withValues(alpha: 0.2),
+                            AppColors.primary.withValues(alpha: 0.02),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  lineTouchData: LineTouchData(
+                    enabled: true,
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (_) => Theme.of(context).colorScheme.surface,
+                      getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
+                        final unit = settings.weightUnitLabel;
+                        return LineTooltipItem(
+                          '${spot.y.toStringAsFixed(1)} $unit',
+                          TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppTypo.bodySm,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -579,9 +448,7 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
   }
 
   Widget _buildRecordsList(List<BodyRecord> records, AppSettings settings, AppLocalizations l10n) {
-    if (records.isEmpty) return const SizedBox();
-
-    final recentRecords = records.take(10).toList();
+    final recentRecords = records.take(15).toList();
     final unitLabel = settings.weightUnitLabel;
 
     return Card(
@@ -590,59 +457,100 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.recentRecords,
-              style: const TextStyle(
-                fontSize: AppTypo.titleSm,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...recentRecords.map((record) {
+            Text(l10n.recentRecords, style: AppTypo.subtitle),
+            const SizedBox(height: AppSpacing.sm),
+            ...recentRecords.asMap().entries.map((entry) {
+              final index = entry.key;
+              final record = entry.value;
               final weight = settings.weightUnit == WeightUnit.lbs
                   ? record.weightKg * 2.20462
                   : record.weightKg;
               final bmi = settings.calculateBmi(record.weightKg);
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      l10n.dateFormat(record.date.year, record.date.month, record.date.day),
-                      style: const TextStyle(fontSize: AppTypo.bodyMd),
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          '${weight.toStringAsFixed(1)} $unitLabel',
-                          style: const TextStyle(
-                            fontSize: AppTypo.bodyMd,
-                            fontWeight: FontWeight.bold,
+              double? diff;
+              if (index + 1 < records.length) {
+                final prevWeight = settings.weightUnit == WeightUnit.lbs
+                    ? records[index + 1].weightKg * 2.20462
+                    : records[index + 1].weightKg;
+                diff = weight - prevWeight;
+              }
+
+              return Dismissible(
+                key: ValueKey(record.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: AppSpacing.md),
+                  color: Colors.red,
+                  child: const Icon(Icons.delete_rounded, color: Colors.white),
+                ),
+                confirmDismiss: (_) => showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text(l10n.deleteRecord),
+                    content: Text(l10n.deleteRecordConfirm),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                        child: Text(l10n.delete),
+                      ),
+                    ],
+                  ),
+                ),
+                onDismissed: (_) {
+                  ref.read(bodyRepositoryProvider).deleteRecord(record.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.recordDeleted)),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.dateFormat(record.date.year, record.date.month, record.date.day),
+                          style: const TextStyle(fontSize: AppTypo.bodyMd),
+                        ),
+                      ),
+                      if (diff != null && diff != 0)
+                        Padding(
+                          padding: const EdgeInsets.only(right: AppSpacing.sm),
+                          child: Text(
+                            '${diff > 0 ? '+' : ''}${diff.toStringAsFixed(1)}',
+                            style: TextStyle(
+                              fontSize: AppTypo.caption,
+                              color: diff > 0 ? Colors.red : AppColors.success,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                        if (bmi != null) ...[
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _getBmiColor(bmi).withValues(alpha: 0.2),
-                              borderRadius: AppRadius.mdAll,
-                            ),
-                            child: Text(
-                              'BMI ${bmi.toStringAsFixed(1)}',
-                              style: TextStyle(
-                                fontSize: AppTypo.bodySm,
-                                color: _getBmiColor(bmi),
-                                fontWeight: FontWeight.w500,
-                              ),
+                      Text(
+                        '${weight.toStringAsFixed(1)} $unitLabel',
+                        style: const TextStyle(fontSize: AppTypo.bodyMd, fontWeight: FontWeight.w600),
+                      ),
+                      if (bmi != null) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getBmiColor(bmi).withValues(alpha: 0.15),
+                            borderRadius: AppRadius.fullAll,
+                          ),
+                          child: Text(
+                            bmi.toStringAsFixed(1),
+                            style: TextStyle(
+                              fontSize: AppTypo.caption,
+                              color: _getBmiColor(bmi),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
+                        ),
                       ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }),
@@ -650,5 +558,172 @@ class _BodyScreenState extends ConsumerState<BodyScreen> {
         ),
       ),
     );
+  }
+
+  void _showAddWeightSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final settings = ref.read(settingsProvider);
+    final weightController = TextEditingController();
+    final heightController = TextEditingController();
+    var selectedDate = DateTime.now();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l10n.addWeight, style: AppTypo.title),
+              const SizedBox(height: AppSpacing.lg),
+              if (settings.heightCm == null) ...[
+                TextField(
+                  controller: heightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: l10n.heightLabel(settings.heightUnitLabel),
+                    prefixIcon: const Icon(Icons.height),
+                    helperText: l10n.heightHelperText,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setSheetState(() => selectedDate = picked);
+                  }
+                },
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: l10n.date,
+                    prefixIcon: const Icon(Icons.calendar_today),
+                  ),
+                  child: Text(
+                    l10n.dateFormat(selectedDate.year, selectedDate.month, selectedDate.day),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: weightController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: l10n.weightLabel(settings.weightUnitLabel),
+                  prefixIcon: const Icon(Icons.monitor_weight),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton(
+                onPressed: () async {
+                  final weight = double.tryParse(weightController.text);
+                  if (weight == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.enterWeight)),
+                    );
+                    return;
+                  }
+
+                  if (settings.heightCm == null && heightController.text.isNotEmpty) {
+                    final height = double.tryParse(heightController.text);
+                    if (height != null && height > 0) {
+                      final heightCm = settings.heightToCm(height);
+                      await ref.read(settingsProvider.notifier).setHeightCm(heightCm);
+                    }
+                  }
+
+                  final currentSettings = ref.read(settingsProvider);
+                  final weightKg = currentSettings.weightUnit == WeightUnit.lbs
+                      ? weight * 0.453592
+                      : weight;
+
+                  await ref.read(bodyRepositoryProvider).addOrUpdateRecord(
+                    date: selectedDate,
+                    weightKg: weightKg,
+                  );
+
+                  if (context.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.weightSaved)),
+                    );
+                  }
+                },
+                child: Text(l10n.saveRecord),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showHeightDialog() {
+    final l10n = AppLocalizations.of(context);
+    final settings = ref.read(settingsProvider);
+    final controller = TextEditingController();
+
+    if (settings.heightCm != null) {
+      controller.text = settings.displayHeight.toStringAsFixed(1);
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.height),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: l10n.heightLabel(settings.heightUnitLabel),
+            prefixIcon: const Icon(Icons.height),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+          FilledButton(
+            onPressed: () {
+              final height = double.tryParse(controller.text);
+              if (height != null && height > 0) {
+                final heightCm = settings.heightToCm(height);
+                ref.read(settingsProvider.notifier).setHeightCm(heightCm);
+              }
+              Navigator.pop(context);
+            },
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getBmiCategoryLabel(double bmi, AppLocalizations l10n) {
+    if (bmi < 18.5) return l10n.bmiUnderweight;
+    if (bmi < 25) return l10n.bmiNormal;
+    if (bmi < 30) return l10n.bmiOverweight;
+    return l10n.bmiObese;
+  }
+
+  Color _getBmiColor(double bmi) {
+    if (bmi < 18.5) return Colors.blue;
+    if (bmi < 25) return Colors.green;
+    if (bmi < 30) return Colors.orange;
+    return Colors.red;
   }
 }

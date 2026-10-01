@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/default_exercises.dart';
@@ -121,12 +120,20 @@ class CardioSetData {
   }
 }
 
+class PreviousSessionData {
+  final DateTime date;
+  final List<WorkoutSet> sets;
+
+  const PreviousSessionData({required this.date, required this.sets});
+}
+
 class ExerciseEntry {
   final String exerciseId;
   final String exerciseName;
   final ExerciseType exerciseType;
   final List<SetData> sets;
   final List<CardioSetData> cardioSets;
+  PreviousSessionData? previousSession;
 
   ExerciseEntry({
     required this.exerciseId,
@@ -292,6 +299,9 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       setState(() {
         _exercises.addAll(entries);
       });
+      for (final entry in entries) {
+        _loadPreviousSession(entry);
+      }
     }
   }
 
@@ -342,6 +352,9 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
         initialCardioSets: [],
       ));
     }
+    for (final entry in _exercises) {
+      _loadPreviousSession(entry);
+    }
   }
 
   @override
@@ -366,6 +379,23 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     }
   }
 
+  Future<void> _loadPreviousSession(ExerciseEntry entry) async {
+    final repo = ref.read(workoutRepositoryProvider);
+    final result = await repo.getLastSessionSetsForExercise(
+      entry.exerciseId,
+      beforeDate: DateTime(_sessionDate.year, _sessionDate.month, _sessionDate.day)
+          .add(const Duration(days: 1)),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        entry.previousSession = PreviousSessionData(
+          date: result.date,
+          sets: result.sets,
+        );
+      });
+    }
+  }
+
   void _addExercise() async {
     final result = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
@@ -378,13 +408,15 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       final exerciseTypeStr = result['exerciseType'] as String? ?? 'strength';
       final exerciseType = ExerciseTypeExtension.fromString(exerciseTypeStr);
 
+      final entry = ExerciseEntry(
+        exerciseId: result['id'] as String,
+        exerciseName: result['name'] as String,
+        exerciseType: exerciseType,
+      );
       setState(() {
-        _exercises.insert(0, ExerciseEntry(
-          exerciseId: result['id'] as String,
-          exerciseName: result['name'] as String,
-          exerciseType: exerciseType,
-        ));
+        _exercises.insert(0, entry);
       });
+      _loadPreviousSession(entry);
     }
   }
 
@@ -708,7 +740,6 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     final l10n = AppLocalizations.of(context);
     final totalSets = _totalSets;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
 
     showDialog(
       context: context,
@@ -744,7 +775,9 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                   }
                 }
               }
-              router.go('/');
+              if (mounted) {
+                Navigator.of(context).pop(true);
+              }
             },
             child: Text(l10n.finish),
           ),
@@ -843,6 +876,45 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     );
   }
 
+  Widget _buildPreviousSummary(ExerciseEntry exercise, AppSettings settings) {
+    final prev = exercise.previousSession;
+    if (prev == null) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context);
+    final sets = prev.sets;
+    final isCardio = sets.any((s) => s.durationSeconds != null || s.distanceKm != null);
+
+    String summary;
+    if (isCardio) {
+      final distanceUnit = settings.useLbs ? 'mi' : 'km';
+      final totalDur = sets.fold<int>(0, (sum, s) => sum + (s.durationSeconds ?? 0));
+      final totalDist = sets.fold<double>(0, (sum, s) => sum + (s.distanceKm ?? 0));
+      final displayDist = settings.useLbs ? totalDist * 0.621371 : totalDist;
+      summary = '${(totalDur / 60).toStringAsFixed(0)}min · ${displayDist.toStringAsFixed(1)}$distanceUnit · ${sets.length} sets';
+    } else {
+      final maxWeight = sets.fold<double>(0, (max, s) => (s.weightKg ?? 0) > max ? (s.weightKg ?? 0) : max);
+      final displayWeight = settings.weightUnit == WeightUnit.lbs
+          ? (maxWeight * 2.20462).toStringAsFixed(1)
+          : maxWeight.toStringAsFixed(1);
+      final unitLabel = settings.weightUnit == WeightUnit.kg ? 'kg' : 'lbs';
+      final maxReps = sets.fold<int>(0, (max, s) => (s.reps ?? 0) > max ? (s.reps ?? 0) : max);
+      summary = '$displayWeight$unitLabel × $maxReps reps × ${sets.length} sets';
+    }
+
+    final dateStr = '${prev.date.month}/${prev.date.day}';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Text(
+        l10n.previousSession('$summary ($dateStr)'),
+        style: TextStyle(
+          fontSize: AppTypo.bodySm,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
   Widget _buildExerciseCard(ExerciseEntry exercise, int exerciseIndex) {
     final l10n = AppLocalizations.of(context);
     final settings = ref.watch(settingsProvider);
@@ -872,6 +944,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                 ),
               ],
             ),
+            _buildPreviousSummary(exercise, settings),
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
@@ -926,6 +999,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                 ),
               ],
             ),
+            _buildPreviousSummary(exercise, settings),
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
@@ -950,6 +1024,22 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   }
 
   Widget _buildSetRow(ExerciseEntry exercise, int setIndex, SetData setData) {
+    final settings = ref.watch(settingsProvider);
+    final prev = exercise.previousSession;
+    final prevSet = (prev != null && setIndex < prev.sets.length) ? prev.sets[setIndex] : null;
+
+    String? weightHint;
+    String? repsHint;
+    if (prevSet != null) {
+      final w = prevSet.weightKg ?? 0;
+      if (w > 0) {
+        final displayW = settings.weightUnit == WeightUnit.lbs ? w * 2.20462 : w;
+        weightHint = displayW % 1 == 0 ? displayW.toInt().toString() : displayW.toStringAsFixed(1);
+      }
+      final r = prevSet.reps ?? 0;
+      if (r > 0) repsHint = r.toString();
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -967,9 +1057,11 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               controller: setData.weightController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                hintText: weightHint,
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
               ),
               onChanged: (_) => _onSetChanged(exercise, setIndex),
             ),
@@ -980,9 +1072,11 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               controller: setData.repsController,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                hintText: repsHint,
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
               ),
               onChanged: (_) => _onSetChanged(exercise, setIndex),
             ),
@@ -1004,6 +1098,22 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   }
 
   Widget _buildCardioSetRow(ExerciseEntry exercise, int setIndex, CardioSetData setData) {
+    final settings = ref.watch(settingsProvider);
+    final prev = exercise.previousSession;
+    final prevSet = (prev != null && setIndex < prev.sets.length) ? prev.sets[setIndex] : null;
+
+    String? durationHint;
+    String? distanceHint;
+    if (prevSet != null) {
+      final dur = prevSet.durationSeconds ?? 0;
+      if (dur > 0) durationHint = (dur / 60).toStringAsFixed(0);
+      final dist = prevSet.distanceKm ?? 0;
+      if (dist > 0) {
+        final displayDist = settings.useLbs ? dist * 0.621371 : dist;
+        distanceHint = displayDist % 1 == 0 ? displayDist.toInt().toString() : displayDist.toStringAsFixed(2);
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1021,9 +1131,11 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               controller: setData.durationController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                hintText: durationHint,
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
               ),
               onChanged: (_) => _onCardioSetChanged(exercise, setIndex),
             ),
@@ -1034,9 +1146,11 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               controller: setData.distanceController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                hintText: distanceHint,
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
               ),
               onChanged: (_) => _onCardioSetChanged(exercise, setIndex),
             ),

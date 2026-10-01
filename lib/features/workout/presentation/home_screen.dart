@@ -18,9 +18,9 @@ import 'providers/dashboard_provider.dart';
 import 'widgets/summary_card.dart';
 import 'widgets/weekly_chart.dart';
 
-final _recentExerciseIdsProvider = FutureProvider<List<String>>((ref) {
+final _recentExerciseIdsProvider = StreamProvider<List<String>>((ref) {
   final repo = ref.watch(exerciseRepositoryProvider);
-  return repo.getRecentExerciseIds(limit: 5);
+  return repo.watchRecentExerciseIds(limit: 5);
 });
 
 class HomeScreen extends ConsumerWidget {

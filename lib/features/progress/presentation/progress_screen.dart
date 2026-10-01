@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/default_exercises.dart';
+import '../../../shared/theme/app_colors.dart';
 import '../../../shared/theme/app_spacing.dart';
 import '../../../shared/theme/app_typo.dart';
 import '../../../core/database/app_database.dart';
@@ -18,11 +19,15 @@ class WorkoutStats {
   final int totalSessions;
   final int totalSets;
   final double totalVolumeKg;
+  final double avgSetsPerSession;
+  final String? mostTrainedExercise;
 
   const WorkoutStats({
     required this.totalSessions,
     required this.totalSets,
     required this.totalVolumeKg,
+    this.avgSetsPerSession = 0,
+    this.mostTrainedExercise,
   });
 
   static const empty = WorkoutStats(
@@ -72,8 +77,10 @@ final workoutStatsProvider = FutureProvider.autoDispose<WorkoutStats>((ref) asyn
   final allSets = await repo.getSetsBySessionIds(sessionIds);
 
   final setsBySession = <String, List<dynamic>>{};
+  final setsByExercise = <String, int>{};
   for (final set in allSets) {
     setsBySession.putIfAbsent(set.sessionId, () => []).add(set);
+    setsByExercise[set.exerciseId] = (setsByExercise[set.exerciseId] ?? 0) + 1;
   }
 
   int sessionsWithSets = 0;
@@ -93,10 +100,19 @@ final workoutStatsProvider = FutureProvider.autoDispose<WorkoutStats>((ref) asyn
     }
   }
 
+  String? mostTrained;
+  if (setsByExercise.isNotEmpty) {
+    mostTrained = setsByExercise.entries
+        .reduce((a, b) => a.value >= b.value ? a : b)
+        .key;
+  }
+
   return WorkoutStats(
     totalSessions: sessionsWithSets,
     totalSets: totalSets,
     totalVolumeKg: totalVolume,
+    avgSetsPerSession: sessionsWithSets > 0 ? totalSets / sessionsWithSets : 0,
+    mostTrainedExercise: mostTrained,
   );
 });
 
@@ -242,6 +258,7 @@ final exerciseProgressProvider = FutureProvider.autoDispose<List<ExerciseProgres
     progressList.add(ExerciseProgress(
       exerciseId: exerciseId,
       exerciseName: exerciseName,
+      exerciseCategory: exercise.category,
       dataType: dataType,
       points: points,
       currentMaxWeight: currentMaxWeight,
@@ -286,14 +303,14 @@ class ProgressScreen extends ConsumerWidget {
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     statsAsync.when(
                       loading: () => const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(child: Text('${l10n.error}: $e')),
-                      data: (stats) => _buildStatsView(context, stats, settings, l10n),
+                      data: (stats) => _buildStatsRow(context, stats, settings, l10n),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     exerciseProgressAsync.when(
@@ -304,7 +321,7 @@ class ProgressScreen extends ConsumerWidget {
                         ),
                       ),
                       error: (e, _) => Center(child: Text('${l10n.error}: $e')),
-                      data: (progressList) => _buildExerciseProgressSection(
+                      data: (progressList) => _buildExerciseList(
                         context,
                         ref,
                         progressList,
@@ -312,6 +329,7 @@ class ProgressScreen extends ConsumerWidget {
                         l10n,
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.md),
                   ],
                 ),
               ),
@@ -330,48 +348,18 @@ class ProgressScreen extends ConsumerWidget {
   ) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       child: Row(
         children: [
-          _buildFilterChip(
-            context,
-            ref,
-            l10n.filterThisMonth,
-            ProgressFilter.thisMonth,
-            currentFilter,
-          ),
+          _buildFilterChip(context, ref, l10n.filterThisMonth, ProgressFilter.thisMonth, currentFilter),
           const SizedBox(width: AppSpacing.sm),
-          _buildFilterChip(
-            context,
-            ref,
-            l10n.filter3Months,
-            ProgressFilter.threeMonths,
-            currentFilter,
-          ),
+          _buildFilterChip(context, ref, l10n.filter3Months, ProgressFilter.threeMonths, currentFilter),
           const SizedBox(width: AppSpacing.sm),
-          _buildFilterChip(
-            context,
-            ref,
-            l10n.filter6Months,
-            ProgressFilter.sixMonths,
-            currentFilter,
-          ),
+          _buildFilterChip(context, ref, l10n.filter6Months, ProgressFilter.sixMonths, currentFilter),
           const SizedBox(width: AppSpacing.sm),
-          _buildFilterChip(
-            context,
-            ref,
-            l10n.filter12Months,
-            ProgressFilter.twelveMonths,
-            currentFilter,
-          ),
+          _buildFilterChip(context, ref, l10n.filter12Months, ProgressFilter.twelveMonths, currentFilter),
           const SizedBox(width: AppSpacing.sm),
-          _buildFilterChip(
-            context,
-            ref,
-            l10n.filterAll,
-            ProgressFilter.all,
-            currentFilter,
-          ),
+          _buildFilterChip(context, ref, l10n.filterAll, ProgressFilter.all, currentFilter),
         ],
       ),
     );
@@ -386,7 +374,12 @@ class ProgressScreen extends ConsumerWidget {
   ) {
     final isSelected = filter == currentFilter;
     return FilterChip(
-      label: Text(label),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
       selected: isSelected,
       onSelected: (_) {
         ref.read(progressFilterProvider.notifier).state = filter;
@@ -394,127 +387,67 @@ class ProgressScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsView(
+  Widget _buildStatsRow(
     BuildContext context,
     WorkoutStats stats,
     AppSettings settings,
     AppLocalizations l10n,
   ) {
-    final unitLabel = settings.weightUnit == WeightUnit.kg ? 'kg' : 'lbs';
-    final volume = settings.weightUnit == WeightUnit.lbs
-        ? stats.totalVolumeKg * 2.20462
-        : stats.totalVolumeKg;
-
     if (stats.totalSessions == 0) {
-      return Center(
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.bar_chart,
-              size: 80,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: AppSpacing.lg),
+            Icon(Icons.bar_chart_rounded, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: AppSpacing.md),
             Text(
               l10n.noWorkoutRecordsForPeriod,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: AppTypo.bodyLg,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: AppTypo.bodyLg, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final unitLabel = settings.weightUnit == WeightUnit.kg ? 'kg' : 'lbs';
+    final volume = settings.weightUnit == WeightUnit.lbs
+        ? stats.totalVolumeKg * 2.20462
+        : stats.totalVolumeKg;
+
+    return Row(
       children: [
-        Text(
-          l10n.totalStats,
-          style: const TextStyle(
-            fontSize: AppTypo.titleMd,
-            fontWeight: FontWeight.bold,
+        Expanded(
+          child: _StatTile(
+            value: stats.totalSessions.toString(),
+            label: l10n.totalWorkouts,
+            icon: Icons.fitness_center_rounded,
+            color: AppColors.primary,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                context,
-                icon: Icons.fitness_center,
-                value: stats.totalSessions.toString(),
-                label: l10n.totalWorkouts,
-                color: Colors.blue,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                context,
-                icon: Icons.repeat,
-                value: stats.totalSets.toString(),
-                label: l10n.totalSetsLabel,
-                color: Colors.green,
-              ),
-            ),
-          ],
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _StatTile(
+            value: stats.totalSets.toString(),
+            label: l10n.totalSetsLabel,
+            icon: Icons.repeat_rounded,
+            color: AppColors.success,
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        _buildStatCard(
-          context,
-          icon: Icons.monitor_weight,
-          value: '${_formatNumber(volume)} $unitLabel',
-          label: l10n.totalVolume,
-          color: Colors.orange,
-          isWide: true,
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _StatTile(
+            value: _formatNumber(volume),
+            label: '$unitLabel ${l10n.volume}',
+            icon: Icons.monitor_weight_rounded,
+            color: AppColors.back,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(
-    BuildContext context, {
-    required IconData icon,
-    required String value,
-    required String label,
-    required Color color,
-    bool isWide = false,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: isWide ? AppTypo.displayMd : AppTypo.titleLg,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: AppTypo.bodyMd,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExerciseProgressSection(
+  Widget _buildExerciseList(
     BuildContext context,
     WidgetRef ref,
     List<ExerciseProgress> progressList,
@@ -522,64 +455,34 @@ class ProgressScreen extends ConsumerWidget {
     AppLocalizations l10n,
   ) {
     if (progressList.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.exerciseProgress,
-            style: const TextStyle(fontSize: AppTypo.titleMd, fontWeight: FontWeight.bold),
-          ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Text(
-                l10n.noExerciseData,
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ),
-          ),
-        ],
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Center(
+          child: Text(l10n.noExerciseData, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        ),
       );
     }
 
     final useLbs = settings.weightUnit == WeightUnit.lbs;
-    final selectedId = ref.watch(selectedExerciseProvider);
-
-    final selected = progressList.firstWhere(
-      (p) => p.exerciseId == selectedId,
-      orElse: () => progressList.first,
-    );
+    final expandedId = ref.watch(selectedExerciseProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.exerciseProgress,
-          style: const TextStyle(fontSize: AppTypo.titleMd, fontWeight: FontWeight.bold),
-        ),
+        Text(l10n.exerciseProgress, style: AppTypo.title),
         const SizedBox(height: AppSpacing.sm),
-        DropdownMenu<String>(
-          initialSelection: selected.exerciseId,
-          expandedInsets: EdgeInsets.zero,
-          label: Text(l10n.selectExercise),
-          onSelected: (value) {
-            if (value != null) {
-              ref.read(selectedExerciseProvider.notifier).state = value;
-            }
-          },
-          dropdownMenuEntries: (List.of(progressList)
-                ..sort((a, b) => a.exerciseName.compareTo(b.exerciseName)))
-              .map((p) => DropdownMenuEntry<String>(
-                    value: p.exerciseId,
-                    label: p.exerciseName,
-                  ))
-              .toList(),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        ExerciseProgressCard(
-          progress: selected,
-          useLbs: useLbs,
-        ),
+        ...progressList.map((progress) {
+          final isExpanded = expandedId == progress.exerciseId;
+          return ExerciseProgressCard(
+            progress: progress,
+            useLbs: useLbs,
+            isExpanded: isExpanded,
+            onTap: () {
+              ref.read(selectedExerciseProvider.notifier).state =
+                  isExpanded ? null : progress.exerciseId;
+            },
+          );
+        }),
       ],
     );
   }
@@ -591,5 +494,53 @@ class ProgressScreen extends ConsumerWidget {
       return '${(number / 1000).toStringAsFixed(1)}K';
     }
     return number.toStringAsFixed(0);
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _StatTile({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.sm),
+        child: Column(
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: AppTypo.titleMd,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: AppTypo.bodySm,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

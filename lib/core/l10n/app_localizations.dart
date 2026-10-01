@@ -94,6 +94,7 @@ class AppLocalizations {
   String get editSets => isKorean ? '세트 편집' : 'Edit Sets';
   String get saveChanges => isKorean ? '변경사항 저장' : 'Save Changes';
   String get saveChangesDone => isKorean ? '변경사항이 저장되었습니다' : 'Changes saved';
+  String previousSession(String date) => isKorean ? '이전: $date' : 'Prev: $date';
 
   // Body Screen
   String get body => isKorean ? '바디' : 'Body';
@@ -116,6 +117,10 @@ class AppLocalizations {
   String get bmiOverweight => isKorean ? '과체중' : 'Overweight';
   String get bmiObese => isKorean ? '비만' : 'Obese';
   String get recentRecords => isKorean ? '최근 기록' : 'Recent Records';
+  String get addWeight => isKorean ? '체중 입력' : 'Add Weight';
+  String get currentWeight => isKorean ? '현재 체중' : 'Current';
+  String get deleteRecordConfirm => isKorean ? '이 기록을 삭제하시겠습니까?' : 'Delete this record?';
+  String get recordDeleted => isKorean ? '기록이 삭제되었습니다' : 'Record deleted';
 
   // Progress Screen
   String get progress => isKorean ? '통계' : 'Progress';
@@ -137,6 +142,12 @@ class AppLocalizations {
   String get weightProgress => isKorean ? '무게 진행' : 'Weight Progress';
   String get repsProgress => isKorean ? '횟수 진행' : 'Reps Progress';
   String changeFormat(String value) => isKorean ? '$value 변화' : '$value change';
+  String get personalRecord => isKorean ? 'PR' : 'PR';
+  String get avgPerSession => isKorean ? '평균 세트' : 'Avg Sets';
+  String get mostTrained => isKorean ? '최다 운동' : 'Most Trained';
+  String exerciseSessionCount(int count) => isKorean ? '$count회 수행' : '$count sessions';
+  String get tapToExpand => isKorean ? '탭하여 차트 보기' : 'Tap for chart';
+  String get volume => isKorean ? '볼륨' : 'Volume';
 
   // Settings Screen
   String get settings => isKorean ? '설정' : 'Settings';

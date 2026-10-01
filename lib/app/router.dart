@@ -62,20 +62,44 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/session/:id',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final sessionId = state.pathParameters['id']!;
-        return SessionScreen(sessionId: sessionId);
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: SessionScreen(sessionId: sessionId),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final tween = Tween(begin: const Offset(0, 1), end: Offset.zero)
+                .chain(CurveTween(curve: Curves.easeOutCubic));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        );
       },
     ),
     GoRoute(
       path: '/timer',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const TimerScreen(),
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const TimerScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final tween = Tween(begin: const Offset(1, 0), end: Offset.zero)
+              .chain(CurveTween(curve: Curves.easeOutCubic));
+          return SlideTransition(position: animation.drive(tween), child: child);
+        },
+      ),
     ),
     GoRoute(
       path: '/body',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const BodyScreen(),
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const BodyScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final tween = Tween(begin: const Offset(1, 0), end: Offset.zero)
+              .chain(CurveTween(curve: Curves.easeOutCubic));
+          return SlideTransition(position: animation.drive(tween), child: child);
+        },
+      ),
     ),
   ],
 );

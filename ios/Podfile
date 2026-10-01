@@ -1,5 +1,5 @@
 # Minimum iOS version for GymLog
-platform :ios, '14.0'
+platform :ios, '15.0'
 
 # Enable modular headers for Swift compatibility
 use_modular_headers!

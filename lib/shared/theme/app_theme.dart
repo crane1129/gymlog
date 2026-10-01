@@ -68,7 +68,14 @@ class AppTheme {
         ),
         chipTheme: ChipThemeData(
           selectedColor: AppColors.primary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimaryLight,
+          ),
+          secondaryLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.smAll,
           ),
@@ -139,7 +146,14 @@ class AppTheme {
         ),
         chipTheme: ChipThemeData(
           selectedColor: AppColors.primary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimaryDark,
+          ),
+          secondaryLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.smAll,
           ),

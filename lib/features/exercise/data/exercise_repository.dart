@@ -125,21 +125,22 @@ class ExerciseRepository {
   }
 
   Future<List<String>> getRecentExerciseIds({int limit = 5}) async {
-    final query = _db.selectOnly(_db.workoutSets, distinct: true)
-      ..addColumns([_db.workoutSets.exerciseId])
-      ..orderBy([OrderingTerm.desc(_db.workoutSets.createdAt)])
-      ..limit(limit * 3);
+    final rows = await watchRecentExerciseIds(limit: limit).first;
+    return rows;
+  }
 
-    final rows = await query.get();
-    final seen = <String>{};
-    final result = <String>[];
-    for (final row in rows) {
-      final id = row.read(_db.workoutSets.exerciseId);
-      if (id != null && seen.add(id) && result.length < limit) {
-        result.add(id);
-      }
-    }
-    return result;
+  Stream<List<String>> watchRecentExerciseIds({int limit = 5}) {
+    final maxCreatedAt = _db.workoutSets.createdAt.max();
+    final query = _db.selectOnly(_db.workoutSets)
+      ..addColumns([_db.workoutSets.exerciseId, maxCreatedAt])
+      ..groupBy([_db.workoutSets.exerciseId])
+      ..orderBy([OrderingTerm.desc(maxCreatedAt)])
+      ..limit(limit);
+
+    return query.watch().map((rows) => rows
+        .map((row) => row.read(_db.workoutSets.exerciseId))
+        .whereType<String>()
+        .toList());
   }
 
   Future<void> deleteExercise(String id) async {
